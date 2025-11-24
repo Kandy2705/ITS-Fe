@@ -24,6 +24,10 @@ import CourseDetail from "./pages/Lms/CourseDetail";
 import FileDetail from "./pages/Lms/FileDetail";
 import AdminUsers from "./pages/Lms/AdminUsers";
 import AdminCourses from "./pages/Lms/AdminCourses";
+import NewCourse from "./pages/Lms/NewCourse";
+import ProgramBuilder from "./pages/Lms/ProgramBuilder";
+import ExerciseCreator from "./pages/Lms/ExerciseCreator";
+import QuizBuilder from "./pages/Lms/QuizBuilder";
 
 export default function App() {
   return (
@@ -61,8 +65,12 @@ export default function App() {
             {/* LMS Pages */}
             <Route path="/lms/auth" element={<AuthPortal />} />
             <Route path="/lms/courses" element={<MyCourses />} />
+            <Route path="/lms/courses/new" element={<NewCourse />} />
             <Route path="/lms/courses/:id" element={<CourseDetail />} />
             <Route path="/lms/courses/:id/files/:fileId" element={<FileDetail />} />
+            <Route path="/lms/programs/new" element={<ProgramBuilder />} />
+            <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
+            <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/courses" element={<AdminCourses />} />
           </Route>

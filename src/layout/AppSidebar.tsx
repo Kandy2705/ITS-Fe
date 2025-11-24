@@ -42,8 +42,12 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
       { name: "Khoá học của tôi", path: "/lms/courses" },
+      { name: "Tạo khoá học", path: "/lms/courses/new" },
       { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
       { name: "Chi tiết file", path: "/lms/courses/demo/files/slide" },
+      { name: "Tạo chương trình", path: "/lms/programs/new" },
+      { name: "Bài lập trình", path: "/lms/exercises/new" },
+      { name: "Quiz Builder", path: "/lms/quizzes/new" },
       { name: "Admin Users", path: "/admin/users" },
       { name: "Admin Khoá học", path: "/admin/courses" },
     ],
