@@ -150,10 +150,10 @@ const CourseDetail = () => {
                   <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
                   ITS đề xuất thêm 1 quiz ôn tập khó.
                 </li>
-                <li className="flex items-start gap-2">
+                {/* <li className="flex items-start gap-2">
                   <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
                   2 sinh viên cần hỗ trợ: thời gian học thấp.
-                </li>
+                </li> */}
               </ul>
             </div>
 

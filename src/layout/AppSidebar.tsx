@@ -4,19 +4,15 @@ import { Link, useLocation } from "react-router";
 // Assume these icons are imported from an icon library
 import {
   BoxCubeIcon,
-  CalenderIcon,
+  // CalenderIcon,
   ChevronDownIcon,
-  GridIcon,
   HorizontaLDots,
-  ListIcon,
-  PageIcon,
   PieChartIcon,
   PlugInIcon,
-  TableIcon,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import SidebarWidget from "./SidebarWidget";
+// import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -26,53 +22,54 @@ type NavItem = {
 };
 
 const navItems: NavItem[] = [
+  // {
+  //   icon: <GridIcon />,
+  //   name: "Dashboard",
+  //   subItems: [{ name: "Tổng quan", path: "/", pro: false }],
+  // },
   {
-    icon: <GridIcon />,
-    name: "Dashboard",
-    subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+    icon: <UserCircleIcon />,
+    name: "Admin",
+    subItems: [
+      { name: "Quản lý người dùng", path: "/admin/users" },
+      { name: "Quản lý khóa học", path: "/admin/courses" },
+      { name: "Phân quyền", path: "/admin/roles" },
+      // { name: "Báo cáo khóa học", path: "/admin/analytics" },
+    ],
   },
   {
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
+    icon: <UserCircleIcon />,
+    name: "Giáo viên",
+    subItems: [
+      { name: "Khóa học của tôi", path: "/teacher/courses" },
+      { name: "Tạo khóa học mới", path: "/teacher/courses/new" },
+      { name: "Lớp học", path: "/teacher/classes" },
+      { name: "Bài tập", path: "/teacher/assignments" },
+      { name: "Điểm số", path: "/teacher/grades" },
+    ],
+  },
+  {
+    icon: <UserCircleIcon />,
+    name: "Học viên",
+    subItems: [
+      { name: "Khóa học của tôi", path: "/student/courses" },
+      { name: "Bài tập", path: "/student/assignments" },
+      // { name: "Điểm số", path: "/student/grades" },
+      // { name: "Thời khóa biểu", path: "/student/schedule" },
+    ],
   },
   {
     icon: <BoxCubeIcon />,
     name: "LMS",
     subItems: [
-      { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
-      { name: "Khoá học của tôi", path: "/lms/courses" },
+      // { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
+      // { name: "Khoá học của tôi", path: "/lms/courses" },
       { name: "Tạo khoá học", path: "/lms/courses/new" },
-      { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
+      // { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
       { name: "Chi tiết file", path: "/lms/courses/demo/files/slide" },
       { name: "Tạo chương trình", path: "/lms/programs/new" },
       { name: "Bài lập trình", path: "/lms/exercises/new" },
       { name: "Quiz Builder", path: "/lms/quizzes/new" },
-      { name: "Admin Users", path: "/admin/users" },
-      { name: "Admin Khoá học", path: "/admin/courses" },
-    ],
-  },
-  {
-    icon: <UserCircleIcon />,
-    name: "User Profile",
-    path: "/profile",
-  },
-  {
-    name: "Forms",
-    icon: <ListIcon />,
-    subItems: [{ name: "Form Elements", path: "/form-elements", pro: false }],
-  },
-  {
-    name: "Tables",
-    icon: <TableIcon />,
-    subItems: [{ name: "Basic Tables", path: "/basic-tables", pro: false }],
-  },
-  {
-    name: "Pages",
-    icon: <PageIcon />,
-    subItems: [
-      { name: "Blank Page", path: "/blank", pro: false },
-      { name: "404 Error", path: "/error-404", pro: false },
     ],
   },
 ];
@@ -384,7 +381,7 @@ const AppSidebar: React.FC = () => {
             </div>
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
     </aside>
   );

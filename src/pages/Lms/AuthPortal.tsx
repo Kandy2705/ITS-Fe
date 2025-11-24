@@ -5,7 +5,7 @@ const quickLinks = [
   "Khóa học của tôi",
   "Lộ trình đã mua",
   "Hỗ trợ kỹ thuật",
-  "Cộng đồng thảo luận",
+  "Cộng đồng diễn đàn",
 ];
 
 const AuthPortal = () => {
