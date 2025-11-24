@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0"
+    />
+    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <title>LMS Experiences | ITS</title>
+  </head>
+  <body
+    x-data="{ page: 'lms', 'loaded': true, 'darkMode': false, 'stickyMenu': false, 'sidebarToggle': false, 'scrollTop': false }"
+    x-init="
+         darkMode = JSON.parse(localStorage.getItem('darkMode'));
+         $watch('darkMode', value => localStorage.setItem('darkMode', JSON.stringify(value)))"
+    :class="{'dark bg-gray-900': darkMode === true}"
+  >
+    <include src="./partials/preloader.html"></include>
+
+    <div class="flex h-screen overflow-hidden">
+      <include src="./partials/sidebar.html"></include>
+
+      <div class="relative flex flex-col flex-1 overflow-x-hidden overflow-y-auto">
+        <include src="./partials/overlay.html" />
+        <include src="./partials/header.html" />
+
+        <main>
+          <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+            <div class="flex flex-col gap-6">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
+                    ITS LMS Demo
+                  </h1>
+                  <p class="text-sm text-gray-500">
+                    Giao diện mẫu cho đăng nhập/đăng ký, học viên, giảng viên và quản trị viên
+                    (dữ liệu giả lập, chưa kết nối API).
+                  </p>
+                </div>
+                <div class="flex items-center gap-3 rounded-lg bg-white p-3 shadow-card dark:bg-gray-900">
+                  <div class="rounded-full bg-indigo-100 p-2 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200">
+                    <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                      <path
+                        d="M12 3L2 9l10 6 8-4.8V17h2V9L12 3zm0 10.2L5.6 9 12 5.8 18.4 9 12 13.2zM4 19v-6H2v8h20v-2H4z"
+                      />
+                    </svg>
+                  </div>
+                  <div class="text-sm">
+                    <p class="font-medium text-gray-900 dark:text-white">Tabbar tuỳ vai trò</p>
+                    <p class="text-gray-500">Chỉ đổi tab để xem giao diện Student / Instructor / Admin.</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="rounded-lg bg-white p-5 shadow-card dark:bg-gray-900">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Đăng nhập</h2>
+                    <span class="rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700 dark:bg-green-500/10 dark:text-green-200">
+                      Student / Instructor / Admin
+                    </span>
+                  </div>
+                  <form class="mt-4 space-y-4">
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Email</label>
+                      <input
+                        class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        type="email"
+                        placeholder="you@example.com"
+                      />
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Mật khẩu</label>
+                      <div class="relative">
+                        <input
+                          class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                          type="password"
+                          placeholder="••••••••"
+                        />
+                        <button
+                          type="button"
+                          class="absolute inset-y-0 right-3 inline-flex items-center text-xs font-medium text-indigo-600 hover:text-indigo-500"
+                        >
+                          Hiện
+                        </button>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                      <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                        Ghi nhớ tôi
+                      </label>
+                      <a class="font-medium text-indigo-600" href="#">Quên mật khẩu?</a>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full rounded-lg bg-indigo-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                    >
+                      Đăng nhập
+                    </button>
+                  </form>
+                </div>
+
+                <div class="rounded-lg bg-white p-5 shadow-card dark:bg-gray-900">
+                  <div class="flex items-center justify-between">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Đăng ký tài khoản</h2>
+                    <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-200">
+                      Dùng dữ liệu giả
+                    </span>
+                  </div>
+                  <form class="mt-4 space-y-4">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Họ tên</label>
+                        <input
+                          class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                          type="text"
+                          placeholder="Nguyễn Văn A"
+                        />
+                      </div>
+                      <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Vai trò</label>
+                        <select
+                          class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        >
+                          <option>Sinh viên</option>
+                          <option>Giảng viên</option>
+                          <option>Admin</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Email</label>
+                      <input
+                        class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                        type="email"
+                        placeholder="newuser@example.com"
+                      />
+                    </div>
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Mật khẩu</label>
+                        <input
+                          class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                          type="password"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                      <div>
+                        <label class="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-200">Xác nhận</label>
+                        <input
+                          class="w-full rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm outline-none transition focus:border-indigo-500 focus:bg-white dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                          type="password"
+                          placeholder="••••••••"
+                        />
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      class="w-full rounded-lg bg-gray-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-gray-800 dark:bg-white dark:text-gray-900"
+                    >
+                      Tạo tài khoản mới
+                    </button>
+                  </form>
+                </div>
+              </div>
+
+              <div
+                x-data="{ activeTab: 'student' }"
+                class="rounded-xl bg-white p-5 shadow-card dark:bg-gray-900"
+              >
+                <div class="flex flex-wrap items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <p class="text-xs uppercase tracking-wide text-indigo-600">Tabbar theo vai trò</p>
+                    <h2 class="text-xl font-semibold text-gray-900 dark:text-white">Trải nghiệm Student / Instructor / Admin</h2>
+                    <p class="text-sm text-gray-500">
+                      Chỉ đổi tab để xem giao diện phù hợp từng vai trò, không cần gọi API.
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2 rounded-full bg-gray-100 p-1 text-sm dark:bg-gray-800">
+                    <button
+                      class="rounded-full px-4 py-2 font-semibold"
+                      :class="activeTab === 'student' ? 'bg-white shadow text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-500'"
+                      @click="activeTab = 'student'"
+                    >
+                      Student View
+                    </button>
+                    <button
+                      class="rounded-full px-4 py-2 font-semibold"
+                      :class="activeTab === 'instructor' ? 'bg-white shadow text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-500'"
+                      @click="activeTab = 'instructor'"
+                    >
+                      Instructor
+                    </button>
+                    <button
+                      class="rounded-full px-4 py-2 font-semibold"
+                      :class="activeTab === 'admin' ? 'bg-white shadow text-gray-900 dark:bg-gray-700 dark:text-white' : 'text-gray-500'"
+                      @click="activeTab = 'admin'"
+                    >
+                      Admin
+                    </button>
+                  </div>
+                </div>
+
+                <div x-show="activeTab === 'student'" class="mt-6 space-y-6" x-transition>
+                  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <div class="rounded-lg border border-gray-100 bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm dark:border-gray-800 dark:from-indigo-900/20 dark:to-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Khoá học</p>
+                          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Lập trình Web</h3>
+                        </div>
+                        <span class="rounded-full bg-indigo-100 px-3 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                          Đang học
+                        </span>
+                      </div>
+                      <p class="mt-2 text-sm text-gray-500">8/12 bài đã hoàn thành · Tiến độ 68%</p>
+                      <div class="mt-3 h-2 rounded-full bg-gray-200 dark:bg-gray-800">
+                        <div class="h-2 rounded-full bg-indigo-600" style="width: 68%"></div>
+                      </div>
+                      <div class="mt-4 flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300">
+                        <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow dark:bg-gray-800">
+                          <span class="h-2 w-2 rounded-full bg-green-500"></span> Quiz tuần này: 85%
+                        </span>
+                        <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 shadow dark:bg-gray-800">
+                          2 tài liệu mới
+                        </span>
+                      </div>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Khoá học</p>
+                          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Xử lý dữ liệu</h3>
+                        </div>
+                        <span class="rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                          Chưa học
+                        </span>
+                      </div>
+                      <p class="mt-2 text-sm text-gray-500">0/10 bài · Tiến độ 0%</p>
+                      <div class="mt-3 h-2 rounded-full bg-gray-200 dark:bg-gray-800">
+                        <div class="h-2 rounded-full bg-amber-500" style="width: 6%"></div>
+                      </div>
+                      <div class="mt-4 space-y-2 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center justify-between">
+                          <span>Giảng viên: Lê Minh</span>
+                          <span class="rounded bg-gray-100 px-2 py-1 text-xs dark:bg-gray-800">4 tài liệu</span>
+                        </div>
+                        <p class="text-gray-500">Nhấn vào để xem mô tả, đề cương và file mẫu.</p>
+                      </div>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Khoá học</p>
+                          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Kỹ năng mềm</h3>
+                        </div>
+                        <span class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">
+                          Hoàn thành
+                        </span>
+                      </div>
+                      <p class="mt-2 text-sm text-gray-500">12/12 bài · Tiến độ 100%</p>
+                      <div class="mt-3 h-2 rounded-full bg-gray-200 dark:bg-gray-800">
+                        <div class="h-2 rounded-full bg-emerald-500" style="width: 100%"></div>
+                      </div>
+                      <div class="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                          <p class="text-xs text-gray-500">Điểm tổng</p>
+                          <p class="text-lg font-semibold text-gray-900 dark:text-white">9.2 / 10</p>
+                        </div>
+                        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                          <p class="text-xs text-gray-500">Chứng chỉ</p>
+                          <p class="text-lg font-semibold text-indigo-600 dark:text-indigo-300">Đã nhận</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                    <div class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900 lg:col-span-2">
+                      <div class="flex items-start justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Chi tiết khoá học</p>
+                          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Lập trình Web - Fullstack</h3>
+                          <p class="mt-1 text-sm text-gray-500">
+                            Mô tả, lộ trình, tiến độ và các file đi kèm cho sinh viên/giảng viên.
+                          </p>
+                        </div>
+                        <button class="rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200">
+                          Xem toàn bộ
+                        </button>
+                      </div>
+                      <div class="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        <div class="rounded-lg bg-indigo-50 p-3 dark:bg-indigo-900/20">
+                          <p class="text-xs text-gray-600 dark:text-gray-300">Tiến độ nhóm</p>
+                          <p class="text-2xl font-semibold text-indigo-600 dark:text-indigo-200">72%</p>
+                          <p class="text-xs text-gray-500">Cập nhật 2h trước</p>
+                        </div>
+                        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                          <p class="text-xs text-gray-600 dark:text-gray-300">Số bài tập</p>
+                          <p class="text-2xl font-semibold text-gray-900 dark:text-white">14</p>
+                          <p class="text-xs text-gray-500">5 bài sắp tới hạn</p>
+                        </div>
+                        <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                          <p class="text-xs text-gray-600 dark:text-gray-300">Tài liệu</p>
+                          <p class="text-2xl font-semibold text-gray-900 dark:text-white">32</p>
+                          <p class="text-xs text-gray-500">PDF, video, quiz</p>
+                        </div>
+                      </div>
+                      <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div class="space-y-3">
+                          <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                            <span>Module 1: HTML/CSS cơ bản</span>
+                            <span class="rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">
+                              Hoàn thành
+                            </span>
+                          </div>
+                          <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                            <span>Module 2: JavaScript & DOM</span>
+                            <span class="rounded bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                              Đang học
+                            </span>
+                          </div>
+                          <div class="flex items-center justify-between text-sm text-gray-600 dark:text-gray-300">
+                            <span>Module 3: Backend Node.js</span>
+                            <span class="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                              Chưa học
+                            </span>
+                          </div>
+                        </div>
+                        <div class="rounded-lg border border-dashed border-gray-200 p-4 dark:border-gray-800">
+                          <p class="text-sm font-semibold text-gray-900 dark:text-white">File đính kèm</p>
+                          <div class="mt-3 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="rounded bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">PDF</span>
+                                <span>01_intro.pdf</span>
+                              </div>
+                              <button class="text-xs font-semibold text-indigo-600">Xem</button>
+                            </div>
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">Video</span>
+                                <span>02_flexbox.mp4</span>
+                              </div>
+                              <button class="text-xs font-semibold text-indigo-600">Xem</button>
+                            </div>
+                            <div class="flex items-center justify-between">
+                              <div class="flex items-center gap-2">
+                                <span class="rounded bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">Quiz</span>
+                                <span>03_midterm.quiz</span>
+                              </div>
+                              <button class="text-xs font-semibold text-indigo-600">Bắt đầu</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="rounded-lg border border-gray-100 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Chi tiết file</p>
+                          <h3 class="text-lg font-semibold text-gray-900 dark:text-white">01_intro.pdf</h3>
+                          <p class="text-sm text-gray-500">Tài liệu mở rộng cho cả sinh viên và giảng viên.</p>
+                        </div>
+                        <span class="rounded bg-gray-100 px-2 py-1 text-xs text-gray-700 dark:bg-gray-800 dark:text-gray-200">2.4 MB</span>
+                      </div>
+                      <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center justify-between">
+                          <span>Phiên bản</span>
+                          <span class="font-semibold text-gray-900 dark:text-white">v1.3 · Cập nhật 1 ngày trước</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Loại</span>
+                          <span class="rounded bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">PDF</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Quyền</span>
+                          <span class="rounded bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">Xem & tải xuống</span>
+                        </div>
+                      </div>
+                      <div class="mt-5 space-y-3">
+                        <p class="text-xs uppercase tracking-wide text-gray-500">Nhận xét nhanh</p>
+                        <div class="space-y-2 text-sm text-gray-700 dark:text-gray-200">
+                          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                            "Video minh hoạ rõ ràng, đề xuất thêm bài tập thực hành." – Giảng viên Huyền
+                          </div>
+                          <div class="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
+                            "File tóm tắt rất tiện cho ôn tập cuối tuần." – Sinh viên Trân
+                          </div>
+                        </div>
+                        <div class="flex gap-2">
+                          <button class="w-full rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-500">
+                            Xem ngay
+                          </button>
+                          <button class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                            Tải xuống
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div x-show="activeTab === 'instructor'" class="mt-6 space-y-6" x-transition>
+                  <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <p class="text-xs uppercase tracking-wide text-indigo-600">Theo dõi tiến độ</p>
+                      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Hiệu suất lớp học</h3>
+                      <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="flex items-center justify-between">
+                          <span>Hoàn thành bài học</span>
+                          <span class="font-semibold text-gray-900 dark:text-white">74%</span>
+                        </div>
+                        <div class="flex h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                          <div class="w-[74%] bg-indigo-600"></div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Tỉ lệ nộp bài đúng hạn</span>
+                          <span class="font-semibold text-gray-900 dark:text-white">82%</span>
+                        </div>
+                        <div class="flex h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                          <div class="w-[82%] bg-emerald-500"></div>
+                        </div>
+                      </div>
+                      <div class="mt-4 rounded-lg bg-gray-50 p-3 text-sm text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                        Thêm biểu đồ phân phối điểm và lịch sử hoạt động để xem rõ hơn.
+                      </div>
+                    </div>
+                    <div class="rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <p class="text-xs uppercase tracking-wide text-indigo-600">Hoạt động sinh viên</p>
+                      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Timeline học tập</h3>
+                      <ul class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                        <li class="flex items-center justify-between">
+                          <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-emerald-500"></span> Huyền · Đang học "Promise"</span>
+                          <span class="text-xs text-gray-400">10:30</span>
+                        </li>
+                        <li class="flex items-center justify-between">
+                          <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-indigo-500"></span> Nam · Hoàn thành Quiz 03</span>
+                          <span class="text-xs text-gray-400">09:50</span>
+                        </li>
+                        <li class="flex items-center justify-between">
+                          <span class="flex items-center gap-2"><span class="h-2 w-2 rounded-full bg-amber-500"></span> Trân · Chưa mở bài 05</span>
+                          <span class="text-xs text-gray-400">Hôm qua</span>
+                        </li>
+                      </ul>
+                      <button class="mt-4 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                        Xem lịch sử chi tiết
+                      </button>
+                    </div>
+                    <div class="rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <p class="text-xs uppercase tracking-wide text-indigo-600">Điều chỉnh lộ trình</p>
+                      <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Gợi ý ITS</h3>
+                      <div class="mt-4 space-y-3 text-sm text-gray-600 dark:text-gray-300">
+                        <div class="rounded-lg border border-dashed border-gray-200 p-3 dark:border-gray-800">
+                          <p class="font-semibold text-gray-900 dark:text-white">JavaScript nâng cao</p>
+                          <p class="text-xs text-gray-500">Khó cho 20% học viên · Đề xuất giảm tốc độ</p>
+                          <div class="mt-2 flex gap-2">
+                            <button class="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">Giảm độ khó</button>
+                            <button class="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-200">Bỏ qua</button>
+                          </div>
+                        </div>
+                        <div class="rounded-lg border border-dashed border-gray-200 p-3 dark:border-gray-800">
+                          <p class="font-semibold text-gray-900 dark:text-white">React Hooks</p>
+                          <p class="text-xs text-gray-500">Nhiều học viên hoàn thành sớm · Gợi ý thêm dự án</p>
+                          <div class="mt-2 flex gap-2">
+                            <button class="rounded-lg bg-emerald-500 px-3 py-1 text-xs font-semibold text-white">Thêm dự án</button>
+                            <button class="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 dark:border-gray-800 dark:text-gray-200">Lưu lại</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="grid grid-cols-1 gap-4 lg:grid-cols-5">
+                    <div class="lg:col-span-3 rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Quản lý nội dung</p>
+                          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Bài học / bài tập</h3>
+                        </div>
+                        <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white">Tạo mới</button>
+                      </div>
+                      <div class="mt-4 space-y-3">
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="rounded bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                            Bài tập
+                          </div>
+                          <div class="flex-1 space-y-1 text-gray-700 dark:text-gray-200">
+                            <p class="font-semibold text-gray-900 dark:text-white">Project: Landing page</p>
+                            <p class="text-xs text-gray-500">Giao cho từng học viên, có phân loại Beginner / Intermediate.</p>
+                            <div class="flex gap-2 text-xs">
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Chỉnh sửa
+                              </button>
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Xoá
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="rounded bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">
+                            Quiz
+                          </div>
+                          <div class="flex-1 space-y-1 text-gray-700 dark:text-gray-200">
+                            <p class="font-semibold text-gray-900 dark:text-white">Quiz chương 3</p>
+                            <p class="text-xs text-gray-500">10 câu trắc nghiệm · Chia theo chủ đề Asynchronous & API.</p>
+                            <div class="flex gap-2 text-xs">
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Chỉnh sửa
+                              </button>
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Xoá
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="rounded bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                            Dự án
+                          </div>
+                          <div class="flex-1 space-y-1 text-gray-700 dark:text-gray-200">
+                            <p class="font-semibold text-gray-900 dark:text-white">Dashboard mini</p>
+                            <p class="text-xs text-gray-500">Phân loại theo cấp độ khó, đi kèm checklist chấm điểm.</p>
+                            <div class="flex gap-2 text-xs">
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Chỉnh sửa
+                              </button>
+                              <button class="rounded border border-gray-200 px-2 py-1 font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                                Xoá
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="lg:col-span-2 rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Xuất báo cáo</p>
+                          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Chọn tiêu chí</h3>
+                        </div>
+                        <button class="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                          Nhận qua email
+                        </button>
+                      </div>
+                      <div class="mt-4 space-y-3 text-sm text-gray-700 dark:text-gray-200">
+                        <div class="flex items-center justify-between">
+                          <span>Khoảng thời gian</span>
+                          <div class="flex items-center gap-2">
+                            <button class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200">
+                              7 ngày
+                            </button>
+                            <button class="rounded-lg bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200">
+                              30 ngày
+                            </button>
+                          </div>
+                        </div>
+                        <div class="flex items-center justify-between">
+                          <span>Chọn định dạng</span>
+                          <div class="flex items-center gap-2">
+                            <button class="rounded-lg bg-indigo-600 px-3 py-1 text-xs font-semibold text-white">PDF</button>
+                            <button class="rounded-lg border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                              Excel
+                            </button>
+                          </div>
+                        </div>
+                        <div class="space-y-2 rounded-lg border border-dashed border-gray-200 p-3 dark:border-gray-800">
+                          <p class="text-xs uppercase tracking-wide text-gray-500">Nội dung</p>
+                          <div class="grid grid-cols-2 gap-2 text-xs">
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked />
+                              Kết quả bài kiểm tra
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" checked />
+                              Lịch sử hoạt động
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                              Nhóm học viên
+                            </label>
+                            <label class="inline-flex items-center gap-2">
+                              <input type="checkbox" class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" />
+                              Lộ trình dự đoán ITS
+                            </label>
+                          </div>
+                        </div>
+                        <div class="flex gap-2">
+                          <button class="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white">Xuất báo cáo</button>
+                          <button class="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-gray-800 dark:text-gray-200 dark:hover:bg-gray-800">
+                            Lưu cấu hình
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div x-show="activeTab === 'admin'" class="mt-6 space-y-6" x-transition>
+                  <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                    <div class="rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Quản lý người dùng</p>
+                          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Danh sách & phân quyền</h3>
+                        </div>
+                        <button class="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white">Thêm mới</button>
+                      </div>
+                      <div class="mt-4 overflow-hidden rounded-lg border border-gray-100 dark:border-gray-800">
+                        <table class="min-w-full divide-y divide-gray-200 text-sm dark:divide-gray-800">
+                          <thead class="bg-gray-50 text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                            <tr>
+                              <th class="px-4 py-2 text-left text-xs font-semibold uppercase">User</th>
+                              <th class="px-4 py-2 text-left text-xs font-semibold uppercase">Vai trò</th>
+                              <th class="px-4 py-2 text-left text-xs font-semibold uppercase">Trạng thái</th>
+                              <th class="px-4 py-2 text-right text-xs font-semibold uppercase">Thao tác</th>
+                            </tr>
+                          </thead>
+                          <tbody class="divide-y divide-gray-200 bg-white dark:divide-gray-800 dark:bg-gray-900">
+                            <tr>
+                              <td class="px-4 py-3">
+                                <div class="font-semibold text-gray-900 dark:text-white">Minh Anh</div>
+                                <div class="text-xs text-gray-500">minhanh@its.edu</div>
+                              </td>
+                              <td class="px-4 py-3 text-gray-700 dark:text-gray-200">Giảng viên</td>
+                              <td class="px-4 py-3">
+                                <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">
+                                  Active
+                                </span>
+                              </td>
+                              <td class="px-4 py-3 text-right text-xs font-semibold text-indigo-600">Chỉnh sửa</td>
+                            </tr>
+                            <tr>
+                              <td class="px-4 py-3">
+                                <div class="font-semibold text-gray-900 dark:text-white">Hải Đăng</div>
+                                <div class="text-xs text-gray-500">haidang@its.edu</div>
+                              </td>
+                              <td class="px-4 py-3 text-gray-700 dark:text-gray-200">Sinh viên</td>
+                              <td class="px-4 py-3">
+                                <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                                  Pending
+                                </span>
+                              </td>
+                              <td class="px-4 py-3 text-right text-xs font-semibold text-indigo-600">Kích hoạt</td>
+                            </tr>
+                            <tr>
+                              <td class="px-4 py-3">
+                                <div class="font-semibold text-gray-900 dark:text-white">Thuỷ Tiên</div>
+                                <div class="text-xs text-gray-500">thuytien@its.edu</div>
+                              </td>
+                              <td class="px-4 py-3 text-gray-700 dark:text-gray-200">Admin</td>
+                              <td class="px-4 py-3">
+                                <span class="rounded-full bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">
+                                  Tạm khoá
+                                </span>
+                              </td>
+                              <td class="px-4 py-3 text-right text-xs font-semibold text-indigo-600">Mở khoá</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                      <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                        <span>Hiển thị 3/50 người dùng</span>
+                        <a class="font-semibold text-indigo-600" href="#">Xem tất cả</a>
+                      </div>
+                    </div>
+
+                    <div class="rounded-lg bg-white p-4 shadow-card dark:bg-gray-900">
+                      <div class="flex items-center justify-between">
+                        <div>
+                          <p class="text-xs uppercase tracking-wide text-indigo-600">Quản lý khoá học</p>
+                          <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Tình trạng & phê duyệt</h3>
+                        </div>
+                        <button class="rounded-lg bg-gray-900 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 dark:bg-white dark:text-gray-900">
+                          Thêm khoá học
+                        </button>
+                      </div>
+                      <div class="mt-4 space-y-3">
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="h-10 w-10 rounded-lg bg-indigo-100 text-center text-sm font-bold leading-10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-100">
+                            FE
+                          </div>
+                          <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                              <p class="font-semibold text-gray-900 dark:text-white">Frontend nâng cao</p>
+                              <span class="rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100">Đã duyệt</span>
+                            </div>
+                            <p class="text-xs text-gray-500">32 học viên · Giảng viên: Minh Anh · 5 file mới chờ kiểm duyệt.</p>
+                          </div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="h-10 w-10 rounded-lg bg-amber-100 text-center text-sm font-bold leading-10 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">
+                            AI
+                          </div>
+                          <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                              <p class="font-semibold text-gray-900 dark:text-white">Nhập môn AI</p>
+                              <span class="rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-100">Chờ duyệt</span>
+                            </div>
+                            <p class="text-xs text-gray-500">Phân loại theo cấp độ khó, Admin có thể gán giảng viên.</p>
+                          </div>
+                        </div>
+                        <div class="flex items-start gap-3 rounded-lg border border-gray-100 p-3 text-sm shadow-sm dark:border-gray-800 dark:bg-gray-900">
+                          <div class="h-10 w-10 rounded-lg bg-rose-100 text-center text-sm font-bold leading-10 text-rose-700 dark:bg-rose-500/20 dark:text-rose-100">
+                            DS
+                          </div>
+                          <div class="flex-1">
+                            <div class="flex items-center justify-between">
+                              <p class="font-semibold text-gray-900 dark:text-white">Khoa học dữ liệu</p>
+                              <span class="rounded-full bg-gray-200 px-2 py-1 text-xs font-semibold text-gray-700 dark:bg-gray-800 dark:text-gray-200">Ẩn</span>
+                            </div>
+                            <p class="text-xs text-gray-500">Ẩn tạm thời để rà soát nội dung, Admin vẫn xem chi tiết file.</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="mt-3 flex items-center justify-between text-xs text-gray-500">
+                        <span>Quản lý tình trạng, phê duyệt và phân quyền truy cập file.</span>
+                        <a class="font-semibold text-indigo-600" href="#">Xem danh sách</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
