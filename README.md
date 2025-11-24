@@ -83,9 +83,9 @@ yarn install
 ### 2. Chạy chế độ development
 
 ```bash
-npm run start
+npm run dev
 # hoặc
-yarn start
+yarn dev
 ```
 
 ---

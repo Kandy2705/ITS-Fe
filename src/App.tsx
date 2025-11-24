@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignIn from "./pages/AuthPages/SignIn";
 import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
@@ -11,13 +11,32 @@ import Avatars from "./pages/UiElements/Avatars";
 import Buttons from "./pages/UiElements/Buttons";
 import LineChart from "./pages/Charts/LineChart";
 import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
+// import Calendar from "./pages/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import AuthPortal from "./pages/Lms/AuthPortal";
+import MyCourses from "./pages/Lms/MyCourses";
+import CourseDetail from "./pages/Lms/CourseDetail";
+import FileDetail from "./pages/Lms/FileDetail";
+import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminCourses from "./pages/Admin/AdminCourses";
+import AdminNewCourse from "./pages/Admin/AdminNewCourse";
+import CourseMembers from "./pages/Admin/CourseMembers";
+import NewCourse from "./pages/Lms/NewCourse";
+import ProgramBuilder from "./pages/Lms/ProgramBuilder";
+import ExerciseCreator from "./pages/Lms/ExerciseCreator";
+import QuizBuilder from "./pages/Lms/QuizBuilder";
+import TeacherCourses from "./pages/Teacher/MyCourses";
+import TeacherCourseDetail from "./pages/Teacher/CourseDetail";
+import TeacherFileDetail from "./pages/Teacher/FileDetail";
+import TeacherNewCourse from "./pages/Teacher/TeacherNewCourse";
+import StudentCourses from "./pages/Student/MyCourses";
+import StudentCourseDetail from "./pages/Student/CourseDetail";
+import StudentFileDetail from "./pages/Student/FileDetail";
 
 export default function App() {
   return (
@@ -31,7 +50,7 @@ export default function App() {
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
-            <Route path="/calendar" element={<Calendar />} />
+            {/* <Route path="/calendar" element={<Calendar />} /> */}
             <Route path="/blank" element={<Blank />} />
 
             {/* Forms */}
@@ -51,6 +70,31 @@ export default function App() {
             {/* Charts */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
+
+            {/* LMS Pages */}
+            <Route path="/lms/auth" element={<AuthPortal />} />
+            <Route path="/lms/courses" element={<MyCourses />} />
+            <Route path="/lms/courses/new" element={<NewCourse />} />
+            <Route path="/lms/courses/:id" element={<CourseDetail />} />
+            <Route path="/lms/courses/:id/files/:fileId" element={<FileDetail />} />
+            <Route path="/lms/programs/new" element={<ProgramBuilder />} />
+            <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
+            <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/courses" element={<AdminCourses />} />
+            <Route path="/admin/courses/new" element={<AdminNewCourse />} />
+            <Route path="/admin/courses/:courseId/members" element={<CourseMembers />} />
+            
+            {/* Teacher Routes */}
+            <Route path="/teacher/courses" element={<TeacherCourses />} />
+            <Route path="/teacher/courses/new" element={<TeacherNewCourse />} />
+            <Route path="/teacher/courses/:id" element={<TeacherCourseDetail />} />
+            <Route path="/teacher/courses/:courseId/files/:fileId" element={<TeacherFileDetail />} />
+            
+            {/* Student Routes */}
+            <Route path="/student/courses" element={<StudentCourses />} />
+            <Route path="/student/courses/:id" element={<StudentCourseDetail />} />
+            <Route path="/student/courses/:courseId/files/:fileId" element={<StudentFileDetail />} />
           </Route>
 
           {/* Auth Layout */}
