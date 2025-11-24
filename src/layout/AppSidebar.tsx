@@ -37,6 +37,18 @@ const navItems: NavItem[] = [
     path: "/calendar",
   },
   {
+    icon: <BoxCubeIcon />,
+    name: "LMS",
+    subItems: [
+      { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
+      { name: "Khoá học của tôi", path: "/lms/courses" },
+      { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
+      { name: "Chi tiết file", path: "/lms/courses/demo/files/slide" },
+      { name: "Admin Users", path: "/admin/users" },
+      { name: "Admin Khoá học", path: "/admin/courses" },
+    ],
+  },
+  {
     icon: <UserCircleIcon />,
     name: "User Profile",
     path: "/profile",

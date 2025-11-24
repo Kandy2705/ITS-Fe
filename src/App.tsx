@@ -18,6 +18,12 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import AuthPortal from "./pages/Lms/AuthPortal";
+import MyCourses from "./pages/Lms/MyCourses";
+import CourseDetail from "./pages/Lms/CourseDetail";
+import FileDetail from "./pages/Lms/FileDetail";
+import AdminUsers from "./pages/Lms/AdminUsers";
+import AdminCourses from "./pages/Lms/AdminCourses";
 
 export default function App() {
   return (
@@ -51,6 +57,14 @@ export default function App() {
             {/* Charts */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
+
+            {/* LMS Pages */}
+            <Route path="/lms/auth" element={<AuthPortal />} />
+            <Route path="/lms/courses" element={<MyCourses />} />
+            <Route path="/lms/courses/:id" element={<CourseDetail />} />
+            <Route path="/lms/courses/:id/files/:fileId" element={<FileDetail />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/courses" element={<AdminCourses />} />
           </Route>
 
           {/* Auth Layout */}
