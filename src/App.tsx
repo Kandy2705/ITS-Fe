@@ -34,9 +34,12 @@ import TeacherCourses from "./pages/Teacher/MyCourses";
 import TeacherCourseDetail from "./pages/Teacher/CourseDetail";
 import TeacherFileDetail from "./pages/Teacher/FileDetail";
 import TeacherNewCourse from "./pages/Teacher/TeacherNewCourse";
+import TeacherLearningContent from "./pages/Teacher/TeacherLearningContent";
 import StudentCourses from "./pages/Student/MyCourses";
 import StudentCourseDetail from "./pages/Student/CourseDetail";
 import StudentFileDetail from "./pages/Student/FileDetail";
+import StudentLearningContent from "./pages/Student/StudentLearningContent";
+import AdminLearningContent from "./pages/Admin/AdminLearningContent";
 
 export default function App() {
   return (
@@ -84,17 +87,20 @@ export default function App() {
             <Route path="/admin/courses" element={<AdminCourses />} />
             <Route path="/admin/courses/new" element={<AdminNewCourse />} />
             <Route path="/admin/courses/:courseId/members" element={<CourseMembers />} />
-            
+            <Route path="/admin/content" element={<AdminLearningContent />} />
+
             {/* Teacher Routes */}
             <Route path="/teacher/courses" element={<TeacherCourses />} />
             <Route path="/teacher/courses/new" element={<TeacherNewCourse />} />
             <Route path="/teacher/courses/:id" element={<TeacherCourseDetail />} />
             <Route path="/teacher/courses/:courseId/files/:fileId" element={<TeacherFileDetail />} />
-            
+            <Route path="/teacher/content" element={<TeacherLearningContent />} />
+
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />
             <Route path="/student/courses/:id" element={<StudentCourseDetail />} />
             <Route path="/student/courses/:courseId/files/:fileId" element={<StudentFileDetail />} />
+            <Route path="/student/content" element={<StudentLearningContent />} />
           </Route>
 
           {/* Auth Layout */}
