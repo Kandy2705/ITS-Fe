@@ -39,6 +39,7 @@ import StudentCourses from "./pages/Student/MyCourses";
 import StudentCourseDetail from "./pages/Student/CourseDetail";
 import StudentFileDetail from "./pages/Student/FileDetail";
 import StudentLearningContent from "./pages/Student/StudentLearningContent";
+import StudentSubmissionHistory from "./pages/Student/StudentSubmissionHistory";
 import AdminLearningContent from "./pages/Admin/AdminLearningContent";
 
 export default function App() {
@@ -95,12 +96,14 @@ export default function App() {
             <Route path="/teacher/courses/:id" element={<TeacherCourseDetail />} />
             <Route path="/teacher/courses/:courseId/files/:fileId" element={<TeacherFileDetail />} />
             <Route path="/teacher/content" element={<TeacherLearningContent />} />
+            <Route path="/teacher/content/upload" element={<FileDetail />} />
 
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />
             <Route path="/student/courses/:id" element={<StudentCourseDetail />} />
             <Route path="/student/courses/:courseId/files/:fileId" element={<StudentFileDetail />} />
             <Route path="/student/content" element={<StudentLearningContent />} />
+            <Route path="/student/submissions" element={<StudentSubmissionHistory />} />
           </Route>
 
           {/* Auth Layout */}

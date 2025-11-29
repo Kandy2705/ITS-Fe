@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
 
 type MaterialFormat = "pdf" | "video" | "slide" | "link";
@@ -92,9 +92,9 @@ const initialAssignments: AssignmentItem[] = [
 const TeacherLearningContent = () => {
   const [materials, setMaterials] = useState<MaterialItem[]>(initialMaterials);
   const [assignments, setAssignments] = useState<AssignmentItem[]>(initialAssignments);
-  const [newMaterial, setNewMaterial] = useState({ title: "", format: "pdf" as MaterialFormat });
+  // const [newMaterial, setNewMaterial] = useState({ title: "", format: "pdf" as MaterialFormat });
   const [gradingNote, setGradingNote] = useState<Record<string, string>>({});
-  const publishedCount = useMemo(() => materials.filter((m) => m.status === "published").length, [materials]);
+  // const publishedCount = useMemo(() => materials.filter((m) => m.status === "published").length, [materials]);
 
   const toggleVisibility = (id: string) => {
     setMaterials((prev) =>
@@ -114,23 +114,23 @@ const TeacherLearningContent = () => {
     setMaterials((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleUpload = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!newMaterial.title.trim()) return;
+  // const handleUpload = (event: React.FormEvent) => {
+  //   event.preventDefault();
+  //   if (!newMaterial.title.trim()) return;
 
-    setMaterials((prev) => [
-      ...prev,
-      {
-        id: `mt-${prev.length + 1}`,
-        title: newMaterial.title,
-        format: newMaterial.format,
-        uploadedAt: "Vừa xong",
-        status: "draft",
-        visibility: "hidden",
-      },
-    ]);
-    setNewMaterial({ title: "", format: "pdf" });
-  };
+  //   setMaterials((prev) => [
+  //     ...prev,
+  //     {
+  //       id: `mt-${prev.length + 1}`,
+  //       title: newMaterial.title,
+  //       format: newMaterial.format,
+  //       uploadedAt: "Vừa xong",
+  //       status: "draft",
+  //       visibility: "hidden",
+  //     },
+  //   ]);
+  //   setNewMaterial({ title: "", format: "pdf" });
+  // };
 
   const handleScore = (assignmentId: string, submissionId: string, score: number) => {
     setAssignments((prev) =>
@@ -170,7 +170,7 @@ const TeacherLearningContent = () => {
         description="Giảng viên đăng tải, chỉnh sửa tài liệu và quản lý bài tập nộp của sinh viên"
       />
 
-      <div className="grid gap-5 lg:grid-cols-3">
+      {/* <div className="grid gap-5 lg:grid-cols-3">
         <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-card dark:border-gray-800 dark:bg-white/5">
           <p className="text-xs font-semibold uppercase text-gray-500">Tài liệu đã xuất bản</p>
           <p className="mt-2 text-3xl font-bold text-brand-700">{publishedCount}</p>
@@ -188,7 +188,7 @@ const TeacherLearningContent = () => {
           </p>
           <p className="text-sm text-gray-600">Thêm nhận xét trực tiếp cho từng bài</p>
         </div>
-      </div>
+      </div> */}
 
       <div className="mt-6 grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-4">
@@ -360,73 +360,124 @@ const TeacherLearningContent = () => {
           <div className="flex items-start justify-between">
             <div>
               <h3 className="text-lg font-semibold text-gray-900">Đăng tải học liệu mới</h3>
-              <p className="text-sm text-gray-600">Chọn định dạng phù hợp trước khi công bố.</p>
+              <p className="text-sm text-gray-600">Tạo và quản lý tài liệu học tập của bạn</p>
             </div>
-            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Tải lên</span>
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">Mới</span>
           </div>
 
-          <form className="mt-4 space-y-3" onSubmit={handleUpload}>
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">Tiêu đề học liệu</label>
-              <input
-                type="text"
-                value={newMaterial.title}
-                onChange={(e) => setNewMaterial((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="Ví dụ: Video hướng dẫn deploy"
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">Định dạng</label>
-              <div className="grid grid-cols-2 gap-3">
-                {(["pdf", "video", "slide", "link"] as MaterialFormat[]).map((format) => (
-                  <label
-                    key={format}
-                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-semibold transition ${
-                      newMaterial.format === format
-                        ? "border-brand-500 bg-brand-50 text-brand-700"
-                        : "border-gray-200 bg-white text-gray-700"
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      checked={newMaterial.format === format}
-                      onChange={() => setNewMaterial((prev) => ({ ...prev, format }))}
-                    />
-                    {materialLabels[format]}
-                  </label>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm font-semibold text-gray-700">Tệp đính kèm</label>
-              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-4 text-sm text-gray-600">
-                <p>Kéo thả file hoặc nhấn để chọn tệp.</p>
-                <p className="text-xs text-gray-500">Hỗ trợ PDF, MP4, PPTX, liên kết ngoài.</p>
-              </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <button
-                type="submit"
-                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-700"
+          <div className="mt-6 text-center">
+            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-brand-50">
+              <svg
+                className="h-10 w-10 text-brand-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
               >
-                Thêm vào danh sách
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-brand-500 hover:text-brand-600"
-              >
-                Lưu nháp
-              </button>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={1.5}
+                  d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                />
+              </svg>
             </div>
-          </form>
+            <h3 className="mt-3 text-lg font-medium text-gray-900">Bắt đầu tải lên</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Tạo tài liệu mới, tải lên video, hoặc thêm liên kết học tập.
+            </p>
+            <div className="mt-6">
+              <a
+                href="/teacher/content/upload"
+                className="inline-flex items-center rounded-md border border-transparent bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
+              >
+                <svg
+                  className="-ml-1 mr-2 h-5 w-5"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                Tạo học liệu mới
+              </a>
+            </div>
+          </div>
 
-          <div className="mt-6 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-600">
-            <p className="font-semibold text-gray-900">Mẹo nhanh</p>
-            <ul className="list-disc pl-5">
-              <li>Ẩn/hiện học liệu để kiểm soát thời điểm sinh viên nhìn thấy.</li>
-              <li>Xuất bản sau khi hoàn tất nội dung và gắn với bài tập liên quan.</li>
-              <li>Cập nhật hạn nộp bài tập để đồng bộ với lịch dạy.</li>
+          <div className="mt-8 border-t border-gray-200 pt-6">
+            <h4 className="text-sm font-medium text-gray-900">Các bước nhanh</h4>
+            <ul className="mt-4 space-y-3">
+              <li className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100">
+                    <svg
+                      className="h-3.5 w-3.5 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-gray-600">
+                  <span className="font-medium">Chọn định dạng</span> phù hợp với nội dung của bạn
+                </p>
+              </li>
+              <li className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100">
+                    <svg
+                      className="h-3.5 w-3.5 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-gray-600">
+                  <span className="font-medium">Tải lên tệp</span> hoặc nhập liên kết
+                </p>
+              </li>
+              <li className="flex items-start">
+                <div className="flex-shrink-0">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-green-100">
+                    <svg
+                      className="h-3.5 w-3.5 text-green-600"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M5 13l4 4L19 7"
+                      />
+                    </svg>
+                  </div>
+                </div>
+                <p className="ml-3 text-sm text-gray-600">
+                  <span className="font-medium">Xuất bản</span> khi đã sẵn sàng
+                </p>
+              </li>
             </ul>
           </div>
         </div>
