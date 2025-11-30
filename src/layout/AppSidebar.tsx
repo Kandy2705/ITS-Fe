@@ -7,7 +7,7 @@ import {
   // CalenderIcon,
   ChevronDownIcon,
   HorizontaLDots,
-  PieChartIcon,
+  // PieChartIcon,
   PlugInIcon,
   UserCircleIcon,
 } from "../icons";
@@ -33,7 +33,7 @@ const navItems: NavItem[] = [
     subItems: [
       { name: "Quản lý người dùng", path: "/admin/users" },
       { name: "Quản lý khóa học", path: "/admin/courses" },
-      { name: "Phân quyền", path: "/admin/roles" },
+      { name: "Phân quyền", path: "/admin/content" },
       // { name: "Báo cáo khóa học", path: "/admin/analytics" },
     ],
   },
@@ -46,6 +46,7 @@ const navItems: NavItem[] = [
       { name: "Lớp học", path: "/teacher/classes" },
       { name: "Bài tập", path: "/teacher/assignments" },
       { name: "Điểm số", path: "/teacher/grades" },
+      { name: "Test", path: "/teacher/content" },
     ],
   },
   {
@@ -53,7 +54,8 @@ const navItems: NavItem[] = [
     name: "Học viên",
     subItems: [
       { name: "Khóa học của tôi", path: "/student/courses" },
-      { name: "Bài tập", path: "/student/assignments" },
+      { name: "Bài tập", path: "/student/content" },
+      { name: "Lịch sử bài tập", path: "/student/submissions" },
       // { name: "Điểm số", path: "/student/grades" },
       // { name: "Thời khóa biểu", path: "/student/schedule" },
     ],
@@ -75,14 +77,14 @@ const navItems: NavItem[] = [
 ];
 
 const othersItems: NavItem[] = [
-  {
-    icon: <PieChartIcon />,
-    name: "Charts",
-    subItems: [
-      { name: "Line Chart", path: "/line-chart", pro: false },
-      { name: "Bar Chart", path: "/bar-chart", pro: false },
-    ],
-  },
+  // {
+  //   icon: <PieChartIcon />,
+  //   name: "Charts",
+  //   subItems: [
+  //     { name: "Line Chart", path: "/line-chart", pro: false },
+  //     { name: "Bar Chart", path: "/bar-chart", pro: false },
+  //   ],
+  // },
   {
     icon: <BoxCubeIcon />,
     name: "UI Elements",

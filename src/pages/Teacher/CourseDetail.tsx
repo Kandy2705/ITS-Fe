@@ -103,9 +103,9 @@ const TeacherCourseDetail = () => {
             <div className="rounded-2xl bg-white p-5 shadow-card">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-gray-900">Bài học & Tiến độ</h3>
-                <button className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
+                {/* <button className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white">
                   Thêm bài học mới
-                </button>
+                </button> */}
               </div>
               <div className="mt-4 space-y-3">
                 {lessons.map((lesson) => (
