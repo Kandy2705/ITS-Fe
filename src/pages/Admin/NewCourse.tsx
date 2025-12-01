@@ -71,8 +71,8 @@ const NewCourse = () => {
       );
 
       if (response.data.success) {
-        // Navigate to courses list or course detail on success
-        navigate("/lms/courses");
+        // Sau khi tạo thành công, điều hướng về trang danh sách khóa học của admin
+        navigate("/admin/courses");
       } else {
         setError(response.data.message || "Không thể tạo khóa học");
       }
@@ -99,9 +99,8 @@ const NewCourse = () => {
         description="Biểu mẫu thêm khoá học với đầy đủ thông tin và tuỳ chọn"
       />
       <div className="space-y-6">
-        <div className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-6 shadow-card md:flex-row md:items-center">
+        <div className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-6 shadow-card md:flex-row md:items-center border-2">
           <div>
-            <p className="text-sm text-gray-500">Courses / New Course</p>
             <h1 className="text-2xl font-semibold text-gray-900">
               Tạo mới khoá học
             </h1>
@@ -122,7 +121,7 @@ const NewCourse = () => {
         )}
 
         <div className="flex flex-col gap-6">
-          <section className="rounded-2xl bg-white p-6 shadow-card">
+          <section className="rounded-2xl bg-white p-6 shadow-card border-2">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">Chi tiết</h2>
               <span className="text-xs font-semibold text-brand-600">
@@ -203,7 +202,7 @@ const NewCourse = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white p-6 shadow-card">
+          <section className="rounded-2xl bg-white p-6 shadow-card border-2">
             <h2 className="text-lg font-semibold text-gray-900">
               Giới thiệu khoá học
             </h2>

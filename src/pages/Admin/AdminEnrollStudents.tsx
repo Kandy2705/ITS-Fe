@@ -179,6 +179,10 @@ const AdminEnrollStudents = () => {
       }
 
       alert("Gán sinh viên vào lớp thành công");
+      // Sau khi gán thành công, tải lại danh sách sinh viên đủ điều kiện
+      // để những sinh viên vừa gán không còn xuất hiện nữa.
+      await loadEligibleStudents(selectedCourseInstanceId);
+      setSelectedStudentIds([]);
     } catch (err: unknown) {
       let errorMessage = "Đã xảy ra lỗi khi gán sinh viên";
       if (axios.isAxiosError(err)) {
@@ -217,7 +221,7 @@ const AdminEnrollStudents = () => {
 
       <div className="space-y-6 text-base">
         {/* Step 1: chọn lớp học */}
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-white p-6 shadow-card border-2">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
@@ -301,9 +305,7 @@ const AdminEnrollStudents = () => {
                         <div className="flex flex-col">
                           <span className="font-medium">{ci.course.title}</span>
                           <span className="text-base text-gray-500">
-                            ID lớp:{" "}
-                            <span className="font-mono text-sm">{ci.id}</span>
-                            {ci.course.code && ` • Mã môn: ${ci.course.code}`}
+                            {ci.course.code && `  Mã môn: ${ci.course.code}`}
                           </span>
                         </div>
                       </td>
@@ -345,7 +347,7 @@ const AdminEnrollStudents = () => {
         </div>
 
         {/* Step 2: chọn sinh viên */}
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-white p-6 shadow-card border-2">
           <div className="mb-4 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
@@ -386,9 +388,6 @@ const AdminEnrollStudents = () => {
                     <th className="px-4 py-3 text-left font-medium tracking-wider">
                       Email
                     </th>
-                    <th className="px-4 py-3 text-left font-medium tracking-wider">
-                      ID
-                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 bg-white text-base">
@@ -426,9 +425,6 @@ const AdminEnrollStudents = () => {
                       </td>
                       <td className="px-4 py-3 text-base text-gray-700">
                         {s.email}
-                      </td>
-                      <td className="px-4 py-3 text-base font-mono text-gray-700">
-                        {s.id}
                       </td>
                     </tr>
                   ))}

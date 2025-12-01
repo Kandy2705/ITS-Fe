@@ -268,7 +268,7 @@ const AdminAssignTeacher = () => {
       />
       <div className="space-y-4 text-base">
         {/* Breadcrumb */}
-        <div className="rounded-2xl bg-white p-4 shadow-card">
+        {/* <div className="rounded-2xl bg-white p-4 shadow-card">
           <nav className="flex text-base text-gray-600">
             <Link to="/admin" className="hover:text-brand-600">
               Admin
@@ -276,7 +276,7 @@ const AdminAssignTeacher = () => {
             <span className="mx-2">/</span>
             <span className="text-gray-900">Gán giáo viên vào khóa học</span>
           </nav>
-        </div>
+        </div> */}
 
         {/* Success Message */}
         {success && (
@@ -320,7 +320,7 @@ const AdminAssignTeacher = () => {
         {!loading && (
           <form onSubmit={handleSubmit} className="space-y-6 text-base">
             {/* Step 1: chọn khóa học */}
-            <div className="rounded-2xl bg-white p-6 shadow-card">
+            <div className="rounded-2xl bg-white p-6 shadow-card border-2">
               <div className="mb-3 flex items-center justify-between gap-3">
                 <div>
                   <h2 className="text-xl font-semibold text-gray-900">
@@ -408,7 +408,7 @@ const AdminAssignTeacher = () => {
 
             {/* Step 2: chọn giáo viên */}
             {selectedCourseId && (
-              <div className="rounded-2xl bg-white p-6 shadow-card">
+              <div className="rounded-2xl bg-white p-6 shadow-card border-2">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <h2 className="text-xl font-semibold text-gray-900">

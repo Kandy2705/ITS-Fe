@@ -22,6 +22,8 @@ import CourseDetail from "./pages/Lms/CourseDetail";
 import FileDetail from "./pages/Lms/FileDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminUserDetail from "./pages/Admin/AdminUserDetail";
+import AdminUserEdit from "./pages/Admin/AdminUserEdit";
+import AdminUserCreate from "./pages/Admin/AdminUserCreate";
 import AdminCoursesList from "./pages/Admin/AdminCoursesList";
 import AdminCourseDetail from "./pages/Admin/AdminCourseDetail";
 import AdminAssignTeacher from "./pages/Admin/AdminAssignTeacher";
@@ -90,7 +92,9 @@ export default function App() {
             <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
             <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/users/new" element={<AdminUserCreate />} />
             <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+            <Route path="/admin/users/:id/edit" element={<AdminUserEdit />} />
             <Route path="/admin/courses" element={<AdminCoursesList />} />
             <Route path="/admin/courses/:id" element={<AdminCourseDetail />} />
             <Route path="/admin/courses/new" element={<NewCourse />} />

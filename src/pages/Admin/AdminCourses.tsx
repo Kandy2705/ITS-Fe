@@ -141,7 +141,7 @@ const AdminCourses = () => {
       />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] p-5 shadow-card">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] p-5 shadow-card ">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Tổng khoá học
             </p>

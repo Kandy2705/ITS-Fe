@@ -130,7 +130,7 @@ const AdminUserDetail = () => {
 
     return (
       <>
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-white p-6 border-2 shadow-card">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div>
               <p className="text-sm font-semibold uppercase text-gray-500">
@@ -163,8 +163,8 @@ const AdminUserDetail = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="">
+          <div className="rounded-2xl w-full border-2 bg-white p-6 shadow-card">
             <h2 className="text-lg font-semibold text-gray-900">
               Thông tin cơ bản
             </h2>
@@ -191,38 +191,6 @@ const AdminUserDetail = () => {
                 </p>
                 <p className="mt-1 text-base font-medium text-gray-900">
                   {user.role}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white p-6 shadow-card">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Thông tin hệ thống
-            </h2>
-            <div className="mt-4 space-y-4 text-sm text-gray-700">
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  ID người dùng
-                </p>
-                <p className="mt-1 font-mono text-sm text-gray-900">
-                  {user.id}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  Trạng thái
-                </p>
-                <p className="mt-1 text-base font-medium text-gray-900">
-                  {statusLabels[user.status] || user.status}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">
-                  Ngày cập nhật gần nhất
-                </p>
-                <p className="mt-1 text-base font-medium text-gray-500">
-                  (Đang chờ backend bổ sung)
                 </p>
               </div>
             </div>

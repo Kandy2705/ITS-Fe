@@ -133,7 +133,7 @@ const AdminCoursesList = () => {
       />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Tổng khóa học
             </p>
@@ -142,7 +142,7 @@ const AdminCoursesList = () => {
             </p>
             <p className="text-base text-gray-600">Tất cả khóa học</p>
           </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Đang hoạt động
             </p>
@@ -152,7 +152,7 @@ const AdminCoursesList = () => {
             </p>
             <p className="text-base text-gray-600">Khóa học đang mở</p>
           </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Trang hiện tại
             </p>
@@ -166,7 +166,7 @@ const AdminCoursesList = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-white p-6 shadow-card border-2">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">

@@ -208,25 +208,10 @@ const AdminCourseInstances = () => {
         description="Xem danh sách lớp học (CourseInstance) và giảng viên phụ trách"
       />
 
-      {/* Breadcrumb */}
-      <div className="mb-4 rounded-2xl bg-white p-4 shadow-card">
-        <nav className="flex text-sm text-gray-600">
-          <Link to="/admin" className="hover:text-brand-600">
-            Admin
-          </Link>
-          <span className="mx-2">/</span>
-          <Link to="/admin/courses" className="hover:text-brand-600">
-            Danh sách khóa học
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">Danh sách lớp học</span>
-        </nav>
-      </div>
-
       <div className="space-y-4">
         {/* Filter bar */}
-        <div className="rounded-2xl bg-white p-5 shadow-card">
-          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+        <div className="rounded-2xl bg-white p-5 shadow-card border-2">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between ">
             <div>
               <h1 className="text-lg font-semibold text-gray-900">
                 Lọc theo khóa học
@@ -302,13 +287,10 @@ const AdminCourseInstances = () => {
               </p>
             </div>
 
-            <div className="overflow-hidden rounded-2xl bg-white shadow-card bg-white p-5">
+            <div className="overflow-hidden rounded-2xl bg-white shadow-card border-2">
               <table className="min-w-full divide-y divide-gray-200 text-base bg-white">
                 <thead className="bg-gray-50 text-sm">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium uppercase tracking-wider text-gray-500">
-                      ID lớp
-                    </th>
                     <th className="px-4 py-3 text-left font-medium uppercase tracking-wider text-gray-500">
                       Môn học
                     </th>
@@ -337,9 +319,6 @@ const AdminCourseInstances = () => {
 
                   {pagedInstances.map((ci) => (
                     <tr key={ci.id}>
-                      <td className="px-4 py-3 font-mono text-base text-gray-700">
-                        {ci.id}
-                      </td>
                       <td className="px-4 py-3 text-base text-gray-900">
                         <div className="flex flex-col">
                           <span className="font-medium">{ci.course.title}</span>

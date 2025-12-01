@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
 import AdminPagination from "../../components/common/AdminPagination";
+import { Modal } from "../../components/ui/modal";
 import api from "../../utils/api";
 import type { PageResponse } from "../../interfaces/pagination";
 import type { User } from "../../interfaces/user";
@@ -29,6 +31,8 @@ const AdminUsers = () => {
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
+  const [togglingUserId, setTogglingUserId] = useState<string | null>(null);
+  const [pendingUser, setPendingUser] = useState<User | null>(null);
 
   const totalUsers = userList?.totalElements ?? 0;
   const totalTeachers =
@@ -97,6 +101,51 @@ const AdminUsers = () => {
     setStatusFilter("");
   };
 
+  const handleToggleUserStatus = async (user: User) => {
+    if (!user.id) return;
+
+    const nextStatus = user.status === "ACTIVE" ? "INACTIVE" : "ACTIVE";
+
+    setTogglingUserId(user.id);
+    try {
+      const res = await api.patch(`/users/${user.id}`, {
+        status: nextStatus,
+      });
+
+      if (res.data?.success) {
+        const updated: User = res.data.data;
+        setUserList((prev) =>
+          prev
+            ? {
+                ...prev,
+                content: prev.content.map((u) =>
+                  u.id === user.id ? { ...u, ...updated } : u
+                ),
+              }
+            : prev
+        );
+      } else {
+        alert(res.data?.message || "Không thể cập nhật trạng thái người dùng");
+      }
+    } catch (error: unknown) {
+      let message = "Đã xảy ra lỗi khi cập nhật trạng thái người dùng";
+      if (axios.isAxiosError(error)) {
+        if (error.response?.data && typeof error.response.data === "object") {
+          const data = error.response.data as { message?: string };
+          message = data.message || error.message || message;
+        } else {
+          message = error.message || message;
+        }
+      } else if (error instanceof Error) {
+        message = error.message;
+      }
+      alert(message);
+      console.error("Error toggling user status:", error);
+    } finally {
+      setTogglingUserId(null);
+    }
+  };
+
   return (
     <>
       <PageMeta
@@ -105,7 +154,7 @@ const AdminUsers = () => {
       />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Tổng số người dùng
             </p>
@@ -116,7 +165,7 @@ const AdminUsers = () => {
               Tất cả tài khoản trong hệ thống
             </p>
           </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Số lượng giảng viên
             </p>
@@ -127,7 +176,7 @@ const AdminUsers = () => {
               Tài khoản có vai trò giảng viên
             </p>
           </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
+          <div className="rounded-2xl bg-white p-5 shadow-card border-2">
             <p className="text-sm font-semibold uppercase text-gray-500">
               Số lượng sinh viên
             </p>
@@ -140,15 +189,26 @@ const AdminUsers = () => {
           </div>
         </div>
 
-        <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="rounded-2xl bg-white p-6 shadow-card border-2">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-gray-900">
                 Danh sách người dùng
               </h2>
               <p className="text-base text-gray-600">
-                Admin có thể khoá, mở tài khoản người dùng.
+                Admin có thể tạo mới, khoá hoặc mở tài khoản người dùng.
               </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-sm font-semibold">
+              <Link
+                to="/admin/users/new"
+                className="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
+              >
+                <span className="h-4 w-4 rounded-full bg-white text-brand-500 flex items-center justify-center text-xs">
+                  +
+                </span>
+                Tạo người dùng mới
+              </Link>
             </div>
           </div>
 
@@ -309,8 +369,21 @@ const AdminUsers = () => {
                           >
                             Xem chi tiết
                           </Link>
-                          <button className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50">
-                            Khoá/Tạm dừng
+                          <Link
+                            to={`/admin/users/${user.id}/edit`}
+                            className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
+                          >
+                            Chỉnh sửa
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setPendingUser(user)}
+                            disabled={loading || togglingUserId === user.id}
+                            className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-70"
+                          >
+                            {user.status === "ACTIVE"
+                              ? "Khoá/Tạm dừng"
+                              : "Kích hoạt"}
                           </button>
                         </div>
                       </td>
@@ -351,6 +424,64 @@ const AdminUsers = () => {
           )}
         </div>
       </div>
+
+      <Modal
+        isOpen={!!pendingUser}
+        onClose={() => setPendingUser(null)}
+        className="max-w-md w-full mx-4 p-6"
+      >
+        {pendingUser && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">
+              {pendingUser.status === "ACTIVE"
+                ? "Khoá / tạm dừng tài khoản"
+                : "Kích hoạt lại tài khoản"}
+            </h3>
+            <p className="mt-2 text-sm text-gray-600">
+              Bạn có chắc chắn muốn{" "}
+              {pendingUser.status === "ACTIVE"
+                ? "khoá / tạm dừng"
+                : "kích hoạt lại"}{" "}
+              tài khoản của người dùng{" "}
+              <span className="font-semibold text-gray-900">
+                {pendingUser.firstName} {pendingUser.lastName}
+              </span>{" "}
+              ({pendingUser.email})?
+            </p>
+            <p className="mt-1 text-xs text-gray-500">
+              Thao tác này sẽ thay đổi khả năng đăng nhập và truy cập hệ thống
+              của người dùng.
+            </p>
+
+            <div className="mt-4 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setPendingUser(null)}
+                disabled={togglingUserId === pendingUser.id}
+                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!pendingUser) return;
+                  void handleToggleUserStatus(pendingUser);
+                  setPendingUser(null);
+                }}
+                disabled={togglingUserId === pendingUser.id}
+                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {togglingUserId === pendingUser.id
+                  ? "Đang xử lý..."
+                  : pendingUser.status === "ACTIVE"
+                  ? "Xác nhận khoá"
+                  : "Xác nhận kích hoạt"}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </>
   );
 };
