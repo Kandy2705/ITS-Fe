@@ -34,7 +34,7 @@ export const setupInterceptors = (api: AxiosInstance) => {
 
         if (status === 401 || msg.includes("expired")) {
           store.dispatch(logout());
-          window.location.href = "/login";
+          window.location.href = "/signin";
         }
       }
 

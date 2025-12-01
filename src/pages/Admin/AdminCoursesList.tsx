@@ -127,51 +127,40 @@ const AdminCoursesList = () => {
 
   return (
     <>
-      {loading && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/30 backdrop-blur-sm">
-          <div className="flex flex-col items-center gap-3 rounded-2xl bg-white px-6 py-4 shadow-xl">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-            <p className="text-sm font-medium text-gray-700">
-              Đang tải dữ liệu, vui lòng chờ...
-            </p>
-          </div>
-        </div>
-      )}
-
       <PageMeta
         title="Danh sách khóa học"
         description="Quản lý toàn bộ khóa học trên hệ thống"
       />
-      <div className="space-y-4">
+      <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
+            <p className="text-sm font-semibold uppercase text-gray-500">
               Tổng khóa học
             </p>
             <p className="text-3xl font-bold text-brand-700">
               {courseList?.totalElements || 0}
             </p>
-            <p className="text-sm text-gray-600">Tất cả khóa học</p>
+            <p className="text-base text-gray-600">Tất cả khóa học</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
+            <p className="text-sm font-semibold uppercase text-gray-500">
               Đang hoạt động
             </p>
             <p className="text-3xl font-bold text-green-600">
               {courseList?.content.filter((c) => c.status === "ACTIVE")
                 .length || 0}
             </p>
-            <p className="text-sm text-gray-600">Khóa học đang mở</p>
+            <p className="text-base text-gray-600">Khóa học đang mở</p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
+            <p className="text-sm font-semibold uppercase text-gray-500">
               Trang hiện tại
             </p>
             <p className="text-3xl font-bold text-gray-900">
               {courseList ? courseList.number + 1 : 0} /{" "}
               {courseList?.totalPages || 0}
             </p>
-            <p className="text-sm text-gray-600">
+            <p className="text-base text-gray-600">
               {courseList?.numberOfElements || 0} khóa học
             </p>
           </div>
@@ -183,11 +172,11 @@ const AdminCoursesList = () => {
               <h2 className="text-xl font-semibold text-gray-900">
                 Danh sách khóa học
               </h2>
-              <p className="text-sm text-gray-600">
+              <p className="text-base text-gray-600">
                 Quản trị và xem chi tiết khóa học trên hệ thống.
               </p>
             </div>
-            <div className="flex flex-wrap gap-2 text-sm font-semibold text-gray-700">
+            <div className="flex flex-wrap gap-2 text-base font-semibold text-gray-700">
               <button
                 onClick={handleCreateCourse}
                 className="flex items-center gap-1.5 rounded-full border border-brand-500 bg-brand-500 px-4 py-1.5 text-white transition hover:bg-brand-600"
@@ -212,7 +201,7 @@ const AdminCoursesList = () => {
 
           {error && (
             <div className="mt-4 rounded-lg bg-red-50 border border-red-200 p-4">
-              <p className="text-sm font-semibold text-red-800">{error}</p>
+              <p className="text-base font-semibold text-red-800">{error}</p>
             </div>
           )}
 
@@ -225,7 +214,7 @@ const AdminCoursesList = () => {
               <input
                 type="text"
                 placeholder="Tìm kiếm khóa học (tiêu đề, mã)..."
-                className="w-full rounded-lg border border-gray-300 px-3 py-1.5 pr-8 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-8 text-base focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -250,19 +239,26 @@ const AdminCoursesList = () => {
             </form>
 
             <select
-              className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              className="rounded-lg border border-gray-300 bg-white px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
             >
               <option value="ACTIVE">Đang hoạt động</option>
               <option value="INACTIVE">Ngừng hoạt động</option>
             </select>
+
+            {loading && (
+              <div className="flex items-center gap-2 text-sm font-semibold text-gray-600">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+                Đang tải dữ liệu khóa học...
+              </div>
+            )}
           </div>
 
           <div className="mt-4 overflow-x-auto">
-            <table className="min-w-full text-left text-sm text-gray-700">
+            <table className="min-w-full text-left text-base text-gray-700">
               <thead>
-                <tr className="border-b border-gray-200 text-xs font-semibold uppercase text-gray-500">
+                <tr className="border-b border-gray-200 text-sm font-semibold uppercase text-gray-500">
                   <th className="px-3 py-2">Mã khóa học</th>
                   <th className="px-3 py-2">Tên khóa học</th>
                   <th className="px-3 py-2">Tín chỉ</th>
@@ -270,14 +266,14 @@ const AdminCoursesList = () => {
                   <th className="px-3 py-2">Hành động</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="text-base">
                 {courseList && courseList.content.length > 0 ? (
                   courseList.content.map((course) => (
                     <tr
                       key={course.id}
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
-                      <td className="px-3 py-3 font-mono text-xs text-gray-600">
+                      <td className="px-3 py-3 font-mono text-sm text-gray-600">
                         {course.code || "-"}
                       </td>
                       <td className="px-3 py-3">
@@ -291,7 +287,7 @@ const AdminCoursesList = () => {
                       <td className="px-3 py-3">{course.credit || "-"}</td>
                       <td className="px-3 py-3">
                         <span
-                          className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
                             statusColors[course.status] ||
                             statusColors["INACTIVE"]
                           }`}
@@ -300,17 +296,17 @@ const AdminCoursesList = () => {
                         </span>
                       </td>
                       <td className="px-3 py-3">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2 text-base">
                           <Link
                             to={`/admin/courses/${course.id}`}
-                            className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 transition hover:bg-blue-100"
+                            className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
                             title="Xem chi tiết"
                           >
                             Chi tiết
                           </Link>
                           <button
                             onClick={() => handleDeleteCourse(course.id)}
-                            className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-100"
+                            className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
                             title="Xóa khóa học"
                           >
                             Xóa
@@ -323,9 +319,11 @@ const AdminCoursesList = () => {
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-3 py-8 text-center text-sm text-gray-500"
+                      className="px-3 py-8 text-center text-base text-gray-500"
                     >
-                      {loading ? "Đang tải..." : "Không tìm thấy khóa học nào"}
+                      {loading
+                        ? "Đang tải dữ liệu khóa học..."
+                        : "Không tìm thấy khóa học nào"}
                     </td>
                   </tr>
                 )}
@@ -337,17 +335,17 @@ const AdminCoursesList = () => {
             <div className="mt-6 flex items-center justify-center">
               <ReactPaginate
                 previousLabel={
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700">
+                  <span className="inline-flex items-center gap-1 text-base font-semibold text-gray-700">
                     Trước
                   </span>
                 }
                 nextLabel={
-                  <span className="inline-flex items-center gap-1 text-sm font-semibold text-gray-700">
+                  <span className="inline-flex items-center gap-1 text-base font-semibold text-gray-700">
                     Sau
                   </span>
                 }
                 breakLabel={
-                  <span className="px-2 text-sm text-gray-500">...</span>
+                  <span className="px-2 text-base text-gray-500">...</span>
                 }
                 pageCount={courseList.totalPages}
                 pageRangeDisplayed={3}
@@ -355,12 +353,12 @@ const AdminCoursesList = () => {
                 onPageChange={handlePageChange}
                 forcePage={currentPage}
                 containerClassName="flex items-center gap-1"
-                pageLinkClassName="px-3 py-2 text-sm font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition min-w-[40px] text-center"
+                pageLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition min-w-[40px] text-center"
                 previousClassName="mr-2"
-                previousLinkClassName="px-3 py-2 text-sm font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
+                previousLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
                 nextClassName="ml-2"
-                nextLinkClassName="px-3 py-2 text-sm font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
-                breakLinkClassName="px-2 py-2 text-sm text-gray-500"
+                nextLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
+                breakLinkClassName="px-2 py-2 text-base text-gray-500"
                 activeLinkClassName="bg-brand-500 text-white border-brand-500 hover:bg-brand-600 hover:border-brand-600"
                 disabledClassName="opacity-50 cursor-not-allowed"
                 disabledLinkClassName="cursor-not-allowed hover:bg-transparent hover:border-gray-200"
@@ -369,7 +367,7 @@ const AdminCoursesList = () => {
           )}
 
           {courseList && (
-            <div className="mt-4 text-sm text-gray-600">
+            <div className="mt-4 text-base text-gray-600">
               Hiển thị {courseList.numberOfElements} trong tổng số{" "}
               {courseList.totalElements} khóa học (Trang {courseList.number + 1}{" "}
               / {courseList.totalPages})

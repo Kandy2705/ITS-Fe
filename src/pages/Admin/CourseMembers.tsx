@@ -1,344 +1,815 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import AdminLoading from "../../components/common/AdminLoading";
+import AdminPagination from "../../components/common/AdminPagination";
+import { Modal } from "../../components/ui/modal";
+import api from "../../utils/api";
+import type { User } from "../../interfaces/user";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { ApiResponse } from "../../interfaces/api";
 
-// Types
-type MemberRole = 'instructor' | 'student';
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
 
-interface Member {
+interface Course {
   id: string;
-  name: string;
-  email: string;
-  role: MemberRole;
-  joinDate: string;
-  lastActive: string;
-  avatar?: string;
-  progress?: number;
+  title: string;
+  code: string | null;
 }
 
-// Mock data for instructors
-const mockInstructors: Member[] = [
-  {
-    id: 'i1',
-    name: 'Lê Mỹ An',
-    email: 'myan@example.com',
-    role: 'instructor',
-    joinDate: '15/10/2023',
-    lastActive: 'Hôm nay',
-    avatar: 'https://randomuser.me/api/portraits/women/44.jpg'
-  },
-  {
-    id: 'i2',
-    name: 'Nguyễn Văn Bình',
-    email: 'vanbinh@example.com',
-    role: 'instructor',
-    joinDate: '20/10/2023',
-    lastActive: '2 giờ trước',
-    avatar: 'https://randomuser.me/api/portraits/men/32.jpg'
-  },
-];
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
+}
 
-// Mock data for students
-const mockStudents: Member[] = [
-  {
-    id: 's1',
-    name: 'Trần Thị Cẩm',
-    email: 'camtt@example.com',
-    role: 'student',
-    joinDate: '01/11/2023',
-    lastActive: 'Hôm nay',
-    progress: 75,
-    avatar: 'https://randomuser.me/api/portraits/women/68.jpg'
-  },
-  {
-    id: 's2',
-    name: 'Phạm Văn Đạt',
-    email: 'datpv@example.com',
-    role: 'student',
-    joinDate: '02/11/2023',
-    lastActive: 'Hôm qua',
-    progress: 45,
-    avatar: 'https://randomuser.me/api/portraits/men/45.jpg'
-  },
-  {
-    id: 's3',
-    name: 'Lê Thị Hương',
-    email: 'huonglt@example.com',
-    role: 'student',
-    joinDate: '03/11/2023',
-    lastActive: '3 ngày trước',
-    progress: 90,
-    avatar: 'https://randomuser.me/api/portraits/women/32.jpg'
-  },
-];
-
-// Mock course data
-const mockCourse = {
-  id: '1',
-  name: 'Lập trình Web nâng cao',
-  code: 'WEB202',
-  startDate: '01/11/2023',
-  endDate: '30/12/2023',
-  totalStudents: 25,
-  totalInstructors: 2,
+const statusLabels: Record<CourseInstanceStatus, string> = {
+  ACTIVE: "Đang mở",
+  INACTIVE: "Đã lưu trữ",
 };
 
+const statusColors: Record<CourseInstanceStatus, string> = {
+  ACTIVE: "bg-green-50 text-green-700",
+  INACTIVE: "bg-gray-100 text-gray-700",
+};
+
+const PAGE_SIZE = 10;
+
 const CourseMembers = () => {
-  const { courseId } = useParams<{ courseId: string }>();
-  const [activeTab, setActiveTab] = useState<'instructors' | 'students'>('instructors');
-  const [searchQuery, setSearchQuery] = useState('');
-  
-  // In a real app, you would fetch this data based on courseId
-  const course = mockCourse;
-  const instructors = mockInstructors;
-  const students = mockStudents;
-  
-  // Log courseId to use it and avoid the unused variable warning
-  console.log('Current course ID:', courseId);
-  
-  const filteredMembers = (activeTab === 'instructors' ? instructors : students).filter(
-    member => member.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-             member.email.toLowerCase().includes(searchQuery.toLowerCase())
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const [instance, setInstance] = useState<CourseInstance | null>(null);
+  const [instanceLoading, setInstanceLoading] = useState(false);
+  const [instanceError, setInstanceError] = useState<string | null>(null);
+
+  const [studentsPage, setStudentsPage] = useState<PageResponse<User> | null>(
+    null
+  );
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
+  const [studentPageIndex, setStudentPageIndex] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [eligibleStudents, setEligibleStudents] = useState<User[]>([]);
+  const [eligibleLoading, setEligibleLoading] = useState(false);
+  const [eligibleError, setEligibleError] = useState<string | null>(null);
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [enrolling, setEnrolling] = useState(false);
+  const [enrollError, setEnrollError] = useState<string | null>(null);
+  const [enrollSuccess, setEnrollSuccess] = useState<string | null>(null);
+  const [archiving, setArchiving] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [archiveSuccess, setArchiveSuccess] = useState<string | null>(null);
+  const [isArchiveModalOpen, setIsArchiveModalOpen] = useState(false);
+
+  const loadInstance = useCallback(async () => {
+    if (!id) {
+      setInstanceError("Không tìm thấy ID lớp học");
+      return;
+    }
+
+    setInstanceLoading(true);
+    setInstanceError(null);
+
+    try {
+      const res = await api.get<ApiResponse<CourseInstance>>(
+        "/learning-management/courses-instance/getDetails",
+        {
+          params: {
+            courseInstanceId: id,
+          },
+        }
+      );
+
+      if (!res.data.success) {
+        setInstanceError(
+          res.data.message || "Không thể tải thông tin lớp học (CourseInstance)"
+        );
+        return;
+      }
+
+      setInstance(res.data.data || null);
+    } catch (err: unknown) {
+      let message = "Đã xảy ra lỗi khi tải thông tin lớp học";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 404) {
+          message = "Lớp học không tồn tại hoặc đã bị xóa";
+        } else if (
+          err.response?.data &&
+          typeof err.response.data === "object"
+        ) {
+          const data = err.response.data as { message?: string };
+          message = data.message || err.message || message;
+        } else {
+          message = err.message || message;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setInstanceError(message);
+    } finally {
+      setInstanceLoading(false);
+    }
+  }, [id]);
+
+  const loadStudents = useCallback(
+    async (page: number) => {
+      if (!id) return;
+
+      setStudentsLoading(true);
+      setStudentsError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<User>>>(
+          "/learning-management/courses-instance/getAllStudentDetails",
+          {
+            params: {
+              courseInstanceId: id,
+              page,
+              size: PAGE_SIZE,
+            },
+          }
+        );
+
+        if (!res.data.success) {
+          setStudentsError(
+            res.data.message || "Không thể tải danh sách sinh viên của lớp"
+          );
+          return;
+        }
+
+        setStudentsPage(res.data.data || null);
+        setStudentPageIndex(page);
+      } catch (err: unknown) {
+        let errorMessage = "Đã xảy ra lỗi khi tải danh sách sinh viên";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            errorMessage = data.message || err.message || errorMessage;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setStudentsError(errorMessage);
+      } finally {
+        setStudentsLoading(false);
+      }
+    },
+    [id]
   );
 
-  return (
-    <>
-      <div className="mb-4">
-        <input
-          type="text"
-          placeholder="Tìm kiếm thành viên..."
-          className="w-full max-w-md rounded-lg border border-gray-300 px-4 py-2 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-      </div>
-      <PageMeta 
-        title={`Thành viên - ${course.name}`} 
-        description={`Quản lý thành viên khóa học ${course.name}`} 
-      />
-      
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-          <div>
-            <nav className="mb-2 flex space-x-2 text-sm text-gray-500">
-              <Link to="/admin/courses" className="hover:text-brand-600">Khóa học</Link>
-              <span>/</span>
-              <span className="text-gray-400">{course.name}</span>
-              <span>/</span>
-              <span className="font-medium text-gray-700">Thành viên</span>
-            </nav>
-            <h1 className="text-2xl font-semibold text-gray-900">Quản lý thành viên</h1>
-            <p className="mt-1 text-gray-600">
-              {course.name} • {course.code} • {course.totalStudents} học viên • {course.totalInstructors} giảng viên
-            </p>
-          </div>
-          <div className="flex items-center space-x-3"></div>
-        </div>
+  useEffect(() => {
+    void loadInstance();
+  }, [loadInstance]);
 
-        {/* Tabs */}
-        <div className="border-b border-gray-200">
-          <nav className="-mb-px flex space-x-8">
-            <button
-              onClick={() => setActiveTab('instructors')}
-              className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${
-                activeTab === 'instructors'
-                  ? 'border-brand-500 text-brand-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
-            >
-              Giảng viên
-              <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                {instructors.length}
-              </span>
-            </button>
-            <button
-              onClick={() => setActiveTab('students')}
-              className={`whitespace-nowrap border-b-2 px-1 py-4 text-sm font-medium ${
-                activeTab === 'students'
-                  ? 'border-brand-500 text-brand-600'
-                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
-              }`}
-            >
-              Học viên
-              <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                {students.length}
-              </span>
-            </button>
-          </nav>
-        </div>
+  useEffect(() => {
+    void loadStudents(0);
+  }, [loadStudents]);
 
-        {/* Search and actions */}
-        <div className="flex flex-col justify-end gap-4 sm:flex-row sm:items-center">
-          {/* <div className="relative max-w-xs">
-            <input
-              type="text"
-              placeholder="Tìm kiếm thành viên..."
-              className="block w-full rounded-md border-gray-300 pr-10 shadow-sm focus:border-brand-500 focus:ring-brand-500 sm:text-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+  const loadEligibleStudents = useCallback(async (courseInstanceId: string) => {
+    setEligibleLoading(true);
+    setEligibleError(null);
+    setEnrollError(null);
+    setEnrollSuccess(null);
+
+    try {
+      const eligibleRes = await api.get<ApiResponse<PageResponse<User>>>(
+        "/learning-management/courses-instance/getAllEligibleStudents",
+        {
+          params: {
+            courseInstanceId,
+            page: 0,
+            size: 200,
+          },
+        }
+      );
+
+      if (!eligibleRes.data.success) {
+        setEligibleError(
+          eligibleRes.data.message ||
+            "Không thể tải danh sách sinh viên khả dụng"
+        );
+        setEligibleStudents([]);
+        return;
+      }
+
+      setEligibleStudents(eligibleRes.data.data?.content || []);
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải danh sách sinh viên khả dụng";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setEligibleError(errorMessage);
+      setEligibleStudents([]);
+    } finally {
+      setEligibleLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (id) {
+      void loadEligibleStudents(id);
+    }
+  }, [id, loadEligibleStudents]);
+
+  const filteredStudents = useMemo(() => {
+    const keyword = searchQuery.trim().toLowerCase();
+    const students = studentsPage?.content || [];
+
+    if (!keyword) return students;
+
+    return students.filter((student) => {
+      const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
+      return (
+        fullName.includes(keyword) ||
+        student.email.toLowerCase().includes(keyword)
+      );
+    });
+  }, [searchQuery, studentsPage]);
+
+  const handleToggleStudent = (studentId: string) => {
+    setSelectedStudentIds((prev) =>
+      prev.includes(studentId)
+        ? prev.filter((item) => item !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const handleEnrollStudents = async () => {
+    if (!id || selectedStudentIds.length === 0) {
+      setEnrollError("Vui lòng chọn ít nhất một sinh viên để gán vào lớp.");
+      setEnrollSuccess(null);
+      return;
+    }
+
+    setEnrollError(null);
+    setEnrollSuccess(null);
+    setEnrolling(true);
+
+    try {
+      const res = await api.post<ApiResponse<void>>(
+        "/learning-management/courses-instance/enrollStudents",
+        selectedStudentIds,
+        {
+          params: {
+            courseInstanceId: id,
+          },
+        }
+      );
+
+      if (!res.data.success) {
+        setEnrollError(
+          res.data.message || "Không thể gán sinh viên vào lớp học này."
+        );
+        return;
+      }
+
+      setEnrollSuccess("Đã gán sinh viên vào lớp thành công.");
+      setSelectedStudentIds([]);
+      await Promise.all([
+        loadStudents(studentPageIndex),
+        loadEligibleStudents(id),
+      ]);
+    } catch (err: unknown) {
+      let message = "Đã xảy ra lỗi khi gán sinh viên";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          message = data.message || err.message || message;
+        } else {
+          message = err.message || message;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setEnrollError(message);
+    } finally {
+      setEnrolling(false);
+    }
+  };
+
+  const handleChangeCourseInstanceStatus = async (
+    newStatus: CourseInstanceStatus
+  ) => {
+    if (!id) {
+      setArchiveError("Không tìm thấy ID lớp học.");
+      setArchiveSuccess(null);
+      return;
+    }
+
+    setArchiving(true);
+    setArchiveError(null);
+    setArchiveSuccess(null);
+
+    try {
+      const res = await api.post<ApiResponse<void>>(
+        "/learning-management/courses-instance/updateStatus",
+        {
+          courseInstanceId: id,
+          newStatus,
+        }
+      );
+
+      if (!res.data.success) {
+        setArchiveError(
+          res.data.message ||
+            "Không thể cập nhật trạng thái lớp học vào lúc này."
+        );
+        return;
+      }
+
+      setArchiveSuccess(
+        newStatus === "INACTIVE"
+          ? "Đã lưu trữ lớp học thành công."
+          : "Đã kích hoạt lại lớp học thành công."
+      );
+      await loadInstance();
+    } catch (err: unknown) {
+      let message = "Đã xảy ra lỗi khi cập nhật trạng thái lớp học.";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          message = data.message || err.message || message;
+        } else {
+          message = err.message || message;
+        }
+      } else if (err instanceof Error) {
+        message = err.message;
+      }
+      setArchiveError(message);
+    } finally {
+      setArchiving(false);
+    }
+  };
+
+  const renderInstanceSection = () => {
+    if (instanceLoading) {
+      return (
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <AdminLoading
+            message="Đang tải thông tin lớp học..."
+            minHeight={180}
+          />
+        </div>
+      );
+    }
+
+    if (instanceError) {
+      return (
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <div className="flex flex-col items-center gap-4 py-6 text-center">
+            <div className="rounded-full bg-red-100 p-4">
               <svg
-                className="h-5 w-5 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
+                className="h-8 w-8 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
                 <path
-                  fillRule="evenodd"
-                  d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-                  clipRule="evenodd"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 018 0z"
                 />
               </svg>
             </div>
-          </div> */}
-          {/* <div className="flex items-center space-x-3"> */}
-            {/* <button
-              type="button"
-              className="inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-            >
-              <svg
-                className="-ml-1 mr-2 h-5 w-5 text-gray-400"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">
+                {instanceError}
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Vui lòng kiểm tra lại hoặc quay về danh sách lớp học.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
-                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                <path
-                  fillRule="evenodd"
-                  d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Xem dưới dạng
-            </button> */}
-            <button
-              type="button"
-              className="inline-flex items-center rounded-md border border-transparent bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-            >
-              <svg
-                className="-ml-1 mr-2 h-5 w-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
+                Thử lại
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600"
               >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Thêm {activeTab === 'instructors' ? 'giảng viên' : 'học viên'}
-            </button>
-          {/* </div> */}
+                Quay lại
+              </button>
+            </div>
+          </div>
         </div>
+      );
+    }
 
-        {/* Members list */}
-        <div className="overflow-hidden bg-white shadow sm:rounded-lg">
-          <ul className="divide-y divide-gray-200">
-            {filteredMembers.length > 0 ? (
-              filteredMembers.map((member) => (
-                <li key={member.id}>
-                  <div className="flex items-center px-4 py-4 sm:px-6">
-                    <div className="flex min-w-0 flex-1 items-center">
-                      <div className="flex-shrink-0">
-                        <img
-                          className="h-12 w-12 rounded-full"
-                          src={member.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(member.name)}&background=random`}
-                          alt=""
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1 px-4">
-                        <div className="flex items-center">
-                          <p className="truncate text-sm font-medium text-brand-600">
-                            {member.name}
-                          </p>
-                          {member.role === 'instructor' && (
-                            <span className="ml-2 inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-                              Giảng viên
-                            </span>
-                          )}
-                        </div>
-                        <p className="text-sm text-gray-500">{member.email}</p>
-                        <div className="mt-1 flex items-center text-sm text-gray-500">
-                          <span>Tham gia: {member.joinDate}</span>
-                          <span className="mx-2">•</span>
-                          <span>Hoạt động: {member.lastActive}</span>
-                        </div>
-                        {member.progress !== undefined && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between">
-                              <div>
-                                <span className="text-xs font-medium text-gray-700">
-                                  Tiến độ: {member.progress}%
-                                </span>
-                              </div>
-                            </div>
-                            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                              <div
-                                className="h-full bg-brand-600"
-                                style={{ width: `${member.progress}%` }}
-                              />
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <button
-                        type="button"
-                        className="inline-flex items-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2"
-                      >
-                        <svg
-                          className="-ml-0.5 mr-1.5 h-4 w-4 text-gray-500"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                          <path
-                            fillRule="evenodd"
-                            d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                        Chi tiết
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))
-            ) : (
-              <li className="px-4 py-12 text-center">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1}
-                    d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"
-                  />
-                </svg>
-                <h3 className="mt-2 text-sm font-medium text-gray-900">Không tìm thấy thành viên nào</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Không có thành viên nào phù hợp với tìm kiếm của bạn.
+    if (!instance) return null;
+
+    return (
+      <>
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <p className="text-sm font-semibold uppercase text-gray-500">
+                Thông tin lớp học
+              </p>
+              <div className="mt-2 flex flex-col gap-1">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {instance.course.title}
+                </h1>
+                <p className="font-mono text-sm text-gray-600">
+                  {instance.course.code
+                    ? `Mã khóa: ${instance.course.code}`
+                    : "Chưa có mã khóa"}
                 </p>
-              </li>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                  statusColors[instance.status] || statusColors.INACTIVE
+                }`}
+              >
+                {statusLabels[instance.status] || instance.status}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsArchiveModalOpen(true)}
+                disabled={archiving}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                  instance.status === "INACTIVE"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {instance.status === "INACTIVE"
+                  ? "Kích hoạt lại lớp"
+                  : "Lưu trữ lớp"}
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate("/admin/courses/instances")}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Về danh sách lớp
+              </button>
+            </div>
+            {(archiveError || archiveSuccess) && (
+              <div
+                className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+                  archiveError
+                    ? "bg-red-50 text-red-700"
+                    : "bg-green-50 font-semibold text-green-700"
+                }`}
+              >
+                {archiveError || archiveSuccess}
+              </div>
             )}
-          </ul>
+          </div>
         </div>
 
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <h2 className="text-lg font-semibold text-gray-900">
+            Giảng viên phụ trách
+          </h2>
+          <div className="mt-4 space-y-3 text-sm text-gray-700">
+            <p>
+              <span className="font-semibold">Họ tên: </span>
+              {instance.teacher.firstName} {instance.teacher.lastName}
+            </p>
+            <p>
+              <span className="font-semibold">Email: </span>
+              {instance.teacher.email}
+            </p>
+            <p>
+              <span className="font-semibold">Vai trò: </span>
+              {instance.teacher.role}
+            </p>
+          </div>
+        </div>
+      </>
+    );
+  };
 
+  const renderStudentsSection = () => {
+    if (!instance) return null;
+
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Danh sách sinh viên đã tham gia lớp
+            </h2>
+            <p className="text-sm text-gray-600">
+              Hiển thị danh sách sinh viên đang học lớp này. Sử dụng tìm kiếm để
+              lọc theo tên hoặc email.
+            </p>
+          </div>
+          <div className="w-full max-w-xs">
+            <input
+              type="text"
+              placeholder="Tìm kiếm theo tên/email..."
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {studentsLoading && (
+          <div className="py-6">
+            <AdminLoading
+              message="Đang tải danh sách sinh viên..."
+              minHeight={100}
+            />
+          </div>
+        )}
+
+        {studentsError && !studentsLoading && (
+          <div className="mt-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {studentsError}
+          </div>
+        )}
+
+        {!studentsLoading && !studentsError && (
+          <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Họ tên
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Email
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Vai trò
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    Trạng thái
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 bg-white">
+                {filteredStudents.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-4 py-6 text-center text-sm text-gray-500"
+                    >
+                      {searchQuery
+                        ? "Không có sinh viên nào khớp với tìm kiếm."
+                        : "Hiện chưa có sinh viên nào tham gia lớp này."}
+                    </td>
+                  </tr>
+                )}
+
+                {filteredStudents.map((student) => (
+                  <tr key={student.id}>
+                    <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                      {student.firstName} {student.lastName}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {student.email}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {student.role}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      <span
+                        className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          student.status === "ACTIVE"
+                            ? "bg-green-50 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
+                      >
+                        {student.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {studentsPage && studentsPage.totalPages > 1 && (
+              <AdminPagination
+                page={studentPageIndex}
+                totalPages={studentsPage.totalPages}
+                onPageChange={(nextPage) => {
+                  setStudentPageIndex(nextPage);
+                  void loadStudents(nextPage);
+                }}
+              />
+            )}
+          </div>
+        )}
       </div>
+    );
+  };
+
+  const renderEnrollmentSection = () => {
+    if (!instance) return null;
+
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">
+              Gán sinh viên trực tiếp
+            </h2>
+            <p className="text-sm text-gray-600">
+              Chọn những sinh viên chưa tham gia để gán vào lớp học này.
+            </p>
+          </div>
+          <span className="text-sm text-gray-500">
+            Sinh viên khả dụng: <strong>{eligibleStudents.length}</strong>
+          </span>
+        </div>
+
+        {eligibleLoading && (
+          <div className="py-4">
+            <AdminLoading
+              message="Đang tải danh sách sinh viên khả dụng..."
+              minHeight={100}
+            />
+          </div>
+        )}
+
+        {eligibleError && !eligibleLoading && (
+          <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+            {eligibleError}
+          </div>
+        )}
+
+        {!eligibleLoading && !eligibleError && (
+          <>
+            <div className="mt-4 overflow-hidden rounded-xl border border-gray-100">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Chọn
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Họ tên
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Email
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {eligibleStudents.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="px-4 py-6 text-center text-sm text-gray-500"
+                      >
+                        Tất cả sinh viên đã được gán cho lớp này.
+                      </td>
+                    </tr>
+                  )}
+
+                  {eligibleStudents.map((student) => (
+                    <tr key={student.id}>
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 text-brand-500"
+                          checked={selectedStudentIds.includes(student.id)}
+                          onChange={() => handleToggleStudent(student.id)}
+                        />
+                      </td>
+                      <td className="px-4 py-3 text-sm font-semibold text-gray-900">
+                        {student.firstName} {student.lastName}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-700">
+                        {student.email}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {enrollError && (
+              <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                {enrollError}
+              </div>
+            )}
+
+            {enrollSuccess && (
+              <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm font-semibold text-green-700">
+                {enrollSuccess}
+              </div>
+            )}
+
+            <div className="mt-4 flex justify-end">
+              <button
+                type="button"
+                onClick={handleEnrollStudents}
+                disabled={enrolling || selectedStudentIds.length === 0}
+                className="inline-flex items-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {enrolling ? "Đang gán..." : "Gán sinh viên đã chọn"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <>
+      <PageMeta
+        title="Quản lý thành viên lớp học"
+        description="Xem thông tin giảng viên và sinh viên trong lớp học"
+      />
+
+      <div className="space-y-4">
+        <div className="rounded-2xl bg-white p-4 shadow-card">
+          <nav className="flex text-sm text-gray-600">
+            <Link to="/admin" className="hover:text-brand-600">
+              Admin
+            </Link>
+            <span className="mx-2">/</span>
+            <Link to="/admin/course-instances" className="hover:text-brand-600">
+              Danh sách lớp học
+            </Link>
+            <span className="mx-2">/</span>
+            <span className="text-gray-900">Thành viên</span>
+          </nav>
+        </div>
+
+        {renderInstanceSection()}
+        {renderEnrollmentSection()}
+        {renderStudentsSection()}
+      </div>
+
+      {instance && (
+        <Modal
+          isOpen={isArchiveModalOpen}
+          onClose={() => setIsArchiveModalOpen(false)}
+          className="max-w-lg p-6"
+        >
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {instance.status === "INACTIVE"
+                  ? "Kích hoạt lại lớp học"
+                  : "Xác nhận lưu trữ lớp học"}
+              </h3>
+              <p className="mt-1 text-sm text-gray-600">
+                {instance.status === "INACTIVE"
+                  ? "Bạn có muốn kích hoạt lại lớp học này? Sinh viên sẽ có thể tham gia lại."
+                  : "Bạn có chắc chắn muốn lưu trữ lớp học này? Sinh viên sẽ không thể tham gia thêm sau khi lưu trữ."}
+              </p>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsArchiveModalOpen(false)}
+                className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                disabled={archiving}
+                onClick={async () => {
+                  await handleChangeCourseInstanceStatus(
+                    instance.status === "INACTIVE" ? "ACTIVE" : "INACTIVE"
+                  );
+                  setIsArchiveModalOpen(false);
+                }}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50 ${
+                  instance.status === "INACTIVE"
+                    ? "bg-green-600 hover:bg-green-700"
+                    : "bg-red-600 hover:bg-red-700"
+                }`}
+              >
+                {archiving
+                  ? "Đang xử lý..."
+                  : instance.status === "INACTIVE"
+                  ? "Kích hoạt lại"
+                  : "Xác nhận lưu trữ"}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </>
   );
 };

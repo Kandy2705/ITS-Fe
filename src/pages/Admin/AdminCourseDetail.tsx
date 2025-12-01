@@ -1,8 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
 import api from "../../utils/api";
+import type { User } from "../../interfaces/user";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
 
 interface Course {
   id: string;
@@ -11,6 +14,15 @@ interface Course {
   description: string | null;
   credit: string | null;
   status: "ACTIVE" | "INACTIVE";
+}
+
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
 }
 
 const statusLabels: Record<string, string> = {
@@ -29,6 +41,26 @@ const AdminCourseDetail = () => {
   const [course, setCourse] = useState<Course | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [instances, setInstances] = useState<CourseInstance[]>([]);
+  const [loadingInstances, setLoadingInstances] = useState(false);
+  const [instancesError, setInstancesError] = useState<string | null>(null);
+  const [teachers, setTeachers] = useState<User[]>([]);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+  const [assignSuccess, setAssignSuccess] = useState<string | null>(null);
+
+  // Tập giáo viên đã được gán vào bất kỳ lớp (CourseInstance) nào của khóa này
+  const assignedTeacherIds = useMemo(() => {
+    if (!id) return new Set<string>();
+    return new Set(instances.map((ci) => ci.teacher.id));
+  }, [instances, id]);
+
+  // Giáo viên khả dụng: ACTIVE và chưa được gán vào khóa này
+  const availableTeachers = useMemo(
+    () => teachers.filter((t) => !assignedTeacherIds.has(t.id)),
+    [teachers, assignedTeacherIds]
+  );
 
   useEffect(() => {
     if (!id) {
@@ -69,6 +101,155 @@ const AdminCourseDetail = () => {
     fetchCourseDetail();
   }, [id]);
 
+  useEffect(() => {
+    const fetchInstances = async () => {
+      if (!id) return;
+
+      setLoadingInstances(true);
+      setInstancesError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<CourseInstance>>>(
+          "/learning-management/courses-instance/getDetailsList",
+          {
+            params: {
+              page: 0,
+              size: 20,
+            },
+          }
+        );
+
+        if (!res.data.success) {
+          setInstancesError(
+            res.data.message ||
+              "Không thể tải danh sách lớp học (courseInstance)"
+          );
+          return;
+        }
+
+        const allInstances = res.data.data?.content || [];
+        const filtered = allInstances.filter((ci) => ci.course?.id === id);
+        setInstances(filtered);
+      } catch (err: unknown) {
+        let errorMessage = "Đã xảy ra lỗi khi tải danh sách lớp học";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            errorMessage = data.message || err.message || errorMessage;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setInstancesError(errorMessage);
+      } finally {
+        setLoadingInstances(false);
+      }
+    };
+
+    void fetchInstances();
+  }, [id]);
+
+  useEffect(() => {
+    const fetchTeachers = async () => {
+      try {
+        const res = await api.get("/users", {
+          params: {
+            role: "TEACHER",
+            status: "ACTIVE",
+            page: 0,
+            size: 100,
+          },
+        });
+
+        if (res.data.success) {
+          setTeachers(res.data.data.content || []);
+        }
+      } catch {
+        // ignore loading teachers error, assigning will fail explicitly
+      }
+    };
+
+    void fetchTeachers();
+  }, []);
+
+  const handleAssignTeacher = async () => {
+    if (!id || !selectedTeacherId) {
+      setAssignError("Vui lòng chọn giáo viên để gán vào khóa học");
+      return;
+    }
+
+    setAssignError(null);
+    setAssignSuccess(null);
+    setAssigning(true);
+
+    try {
+      const res = await api.post("/learning-management/assign", null, {
+        params: {
+          courseId: id,
+          teacherId: selectedTeacherId,
+        },
+      });
+
+      if (!res.data.success) {
+        setAssignError(
+          res.data.message || "Không thể gán giáo viên vào khóa học"
+        );
+        return;
+      }
+
+      const teacher = teachers.find((t) => t.id === selectedTeacherId);
+      setAssignSuccess(
+        `Đã gán giáo viên ${teacher?.firstName ?? ""} ${
+          teacher?.lastName ?? ""
+        } vào khóa học thành công.`
+      );
+      setSelectedTeacherId("");
+
+      // Reload course instances to reflect new assignment
+      if (id) {
+        try {
+          const ciRes = await api.get<
+            ApiResponse<PageResponse<CourseInstance>>
+          >("/learning-management/courses-instance/getDetailsList", {
+            params: {
+              page: 0,
+              size: 20,
+            },
+          });
+
+          if (ciRes.data.success) {
+            const allInstances = ciRes.data.data?.content || [];
+            const filtered = allInstances.filter((ci) => ci.course?.id === id);
+            setInstances(filtered);
+          }
+        } catch {
+          // ignore reload error, instances list will be updated next time
+        }
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi gán giáo viên vào khóa học";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.status === 400) {
+          errorMessage =
+            err.response?.data?.message ||
+            "Giáo viên đã được gán vào khóa học này hoặc dữ liệu không hợp lệ";
+        } else {
+          errorMessage =
+            err.response?.data?.message ||
+            err.message ||
+            "Đã xảy ra lỗi khi gán giáo viên vào khóa học";
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setAssignError(errorMessage);
+    } finally {
+      setAssigning(false);
+    }
+  };
+
   const handleDeleteCourse = async () => {
     if (!id) return;
     if (!window.confirm("Bạn có chắc chắn muốn xóa khóa học này?")) {
@@ -105,7 +286,7 @@ const AdminCourseDetail = () => {
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="flex flex-col items-center gap-3">
             <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-            <p className="text-sm font-medium text-gray-700">
+            <p className="text-base font-medium text-gray-700">
               Đang tải thông tin khóa học...
             </p>
           </div>
@@ -138,7 +319,7 @@ const AdminCourseDetail = () => {
               </div>
               <div className="text-center">
                 <h3 className="text-lg font-semibold text-gray-900">{error}</h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-base text-gray-600">
                   Không thể tải thông tin khóa học
                 </p>
               </div>
@@ -231,7 +412,7 @@ const AdminCourseDetail = () => {
                 <p className="text-xs font-semibold uppercase text-gray-500">
                   Tên khóa học
                 </p>
-                <p className="mt-1 text-sm font-medium text-gray-900">
+                <p className="mt-1 text-base font-medium text-gray-900">
                   {course.title}
                 </p>
               </div>
@@ -250,7 +431,7 @@ const AdminCourseDetail = () => {
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     Tín chỉ
                   </p>
-                  <p className="mt-1 text-sm font-medium text-gray-900">
+                  <p className="mt-1 text-base font-medium text-gray-900">
                     {course.credit}
                   </p>
                 </div>
@@ -278,11 +459,11 @@ const AdminCourseDetail = () => {
             </h2>
             <div className="mt-4">
               {course.description ? (
-                <p className="whitespace-pre-wrap text-sm text-gray-700">
+                <p className="whitespace-pre-wrap text-base text-gray-700">
                   {course.description}
                 </p>
               ) : (
-                <p className="text-sm text-gray-400 italic">
+                <p className="text-base text-gray-400 italic">
                   Chưa có mô tả cho khóa học này
                 </p>
               )}
@@ -299,7 +480,174 @@ const AdminCourseDetail = () => {
             <p className="text-xs font-semibold uppercase text-gray-500">
               ID khóa học
             </p>
-            <p className="mt-1 font-mono text-xs text-gray-600">{course.id}</p>
+            <p className="mt-1 font-mono text-sm text-gray-600">{course.id}</p>
+          </div>
+        </div>
+
+        {/* Course instances & teachers */}
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          {/* Assign teacher to this course (table) */}
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">
+              Thêm giảng viên vào khóa học này
+            </h3>
+            <p className="mt-1 text-base text-gray-600">
+              Chọn một giảng viên để tạo lớp học (CourseInstance) mới cho khóa.
+            </p>
+
+            {assignSuccess && (
+              <div className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-base font-semibold text-green-800">
+                {assignSuccess}
+              </div>
+            )}
+
+            {assignError && (
+              <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-base font-semibold text-red-800">
+                {assignError}
+              </div>
+            )}
+
+            <div className="mt-3 overflow-hidden rounded-xl border border-gray-100">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Chọn
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Họ tên
+                    </th>
+                    <th className="px-4 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Email
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {availableTeachers.length === 0 && (
+                    <tr>
+                      <td
+                        colSpan={3}
+                        className="px-4 py-3 text-center text-xs text-gray-500"
+                      >
+                        Tất cả giảng viên đang hoạt động đã được gán cho khóa
+                        học này.
+                      </td>
+                    </tr>
+                  )}
+                  {availableTeachers.map((teacher) => (
+                    <tr
+                      key={teacher.id}
+                      className={`cursor-pointer hover:bg-brand-50 ${
+                        selectedTeacherId === teacher.id ? "bg-brand-50" : ""
+                      }`}
+                      onClick={() => {
+                        setSelectedTeacherId(teacher.id);
+                        setAssignError(null);
+                        setAssignSuccess(null);
+                      }}
+                    >
+                      <td className="px-4 py-2">
+                        <input
+                          type="radio"
+                          className="h-4 w-4 text-brand-500"
+                          checked={selectedTeacherId === teacher.id}
+                          onChange={() => {
+                            setSelectedTeacherId(teacher.id);
+                            setAssignError(null);
+                            setAssignSuccess(null);
+                          }}
+                        />
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        {teacher.firstName} {teacher.lastName}
+                      </td>
+                      <td className="px-4 py-2 text-sm text-gray-700">
+                        {teacher.email}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-3 flex justify-end">
+              <button
+                type="button"
+                onClick={handleAssignTeacher}
+                disabled={assigning || !selectedTeacherId}
+                className="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {assigning ? "Đang gán..." : "Gán giảng viên"}
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-6 border-t border-gray-100 pt-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900">
+                Danh sách lớp học (CourseInstance) của khóa
+              </h2>
+              <span className="text-sm text-gray-500">
+                Tổng: <strong>{instances.length}</strong> lớp
+              </span>
+            </div>
+
+            {loadingInstances && (
+              <div className="mt-3 flex items-center justify-center py-4">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-6 w-6 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+                  <p className="text-base font-medium text-gray-700">
+                    Đang tải danh sách lớp học...
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {instancesError && !loadingInstances && (
+              <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-base text-red-700">
+                {instancesError}
+              </div>
+            )}
+
+            {!loadingInstances && !instancesError && (
+              <div className="mt-3 space-y-2">
+                {instances.length === 0 && (
+                  <p className="text-base text-gray-500">
+                    Chưa có lớp học (courseInstance) nào cho khóa này.
+                  </p>
+                )}
+
+                {instances.map((ci) => (
+                  <Link
+                    key={ci.id}
+                    to={`/admin/course-instances/${ci.id}`}
+                    className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-3 transition hover:border-brand-200 hover:bg-brand-50"
+                  >
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-sm font-mono text-gray-500">
+                        ID lớp: {ci.id}
+                      </span>
+                      <span className="text-base font-semibold text-gray-900">
+                        {ci.course.title}
+                        {ci.course.code && (
+                          <span className="ml-1 text-sm text-gray-500">
+                            (Mã: {ci.course.code})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <div className="text-right text-base text-gray-800">
+                      <p className="font-semibold">
+                        {ci.teacher.firstName} {ci.teacher.lastName}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {ci.teacher.email}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

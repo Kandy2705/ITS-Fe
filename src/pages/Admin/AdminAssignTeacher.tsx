@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import AdminLoading from "../../components/common/AdminLoading";
+import AdminPagination from "../../components/common/AdminPagination";
 import api from "../../utils/api";
 import { User } from "../../interfaces/user";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { ApiResponse } from "../../interfaces/api";
 
 interface Course {
   id: string;
@@ -12,15 +16,30 @@ interface Course {
   status: "ACTIVE" | "INACTIVE";
 }
 
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
+}
+
 const AdminAssignTeacher = () => {
   const [courses, setCourses] = useState<Course[]>([]);
   const [teachers, setTeachers] = useState<User[]>([]);
+  const [instances, setInstances] = useState<CourseInstance[]>([]);
+  const [instancesError, setInstancesError] = useState<string | null>(null);
+  const [instancesLoading, setInstancesLoading] = useState(false);
   const [selectedCourseId, setSelectedCourseId] = useState<string>("");
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>("");
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [coursePage, setCoursePage] = useState(0);
+  const [teacherPage, setTeacherPage] = useState(0);
+  const pageSize = 10;
 
   // Fetch courses
   const fetchCourses = useCallback(async () => {
@@ -53,6 +72,104 @@ const AdminAssignTeacher = () => {
       setLoading(false);
     }
   }, []);
+
+  // reset page khi thay đổi danh sách (phòng khi sau này có filter)
+  useEffect(() => {
+    setCoursePage(0);
+  }, [courses.length]);
+
+  useEffect(() => {
+    setTeacherPage(0);
+    setSelectedTeacherId("");
+  }, [teachers.length, selectedCourseId]);
+
+  // Load course instances để xác định giáo viên đã được gán cho mỗi khóa
+  useEffect(() => {
+    const loadInstances = async () => {
+      if (!selectedCourseId) {
+        setInstances([]);
+        setInstancesError(null);
+        return;
+      }
+
+      setInstancesLoading(true);
+      setInstancesError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<CourseInstance>>>(
+          "/learning-management/courses-instance/getDetailsList",
+          {
+            params: {
+              page: 0,
+              size: 200,
+            },
+          }
+        );
+
+        if (!res.data.success) {
+          setInstancesError(
+            res.data.message ||
+              "Không thể tải danh sách lớp học để lọc giáo viên"
+          );
+          setInstances([]);
+          return;
+        }
+
+        const all = res.data.data?.content || [];
+        const byCourse = all.filter(
+          (ci) => ci.course && ci.course.id === selectedCourseId
+        );
+        setInstances(byCourse);
+      } catch (err: unknown) {
+        let errorMessage =
+          "Đã xảy ra lỗi khi tải danh sách lớp học để lọc giáo viên";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            errorMessage = data.message || err.message || errorMessage;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setInstancesError(errorMessage);
+        setInstances([]);
+      } finally {
+        setInstancesLoading(false);
+      }
+    };
+
+    void loadInstances();
+  }, [selectedCourseId]);
+
+  const totalCoursePages = Math.max(
+    1,
+    Math.ceil(courses.length / pageSize) || 1
+  );
+  const pagedCourses = useMemo(
+    () =>
+      courses.slice(coursePage * pageSize, coursePage * pageSize + pageSize),
+    [courses, coursePage]
+  );
+
+  const pagedTeachers = useMemo(
+    () =>
+      teachers.slice(teacherPage * pageSize, teacherPage * pageSize + pageSize),
+    [teachers, teacherPage]
+  );
+
+  // Danh sách giáo viên đã gán cho khóa được chọn
+  const assignedTeacherIds = useMemo(() => {
+    if (!selectedCourseId) return new Set<string>();
+    return new Set(instances.map((ci) => ci.teacher.id));
+  }, [instances, selectedCourseId]);
+
+  // Giáo viên khả dụng cho khóa (chưa được gán vào bất kỳ lớp nào của khóa đó)
+  const availableTeachers = useMemo(() => {
+    if (!selectedCourseId) return teachers;
+    return teachers.filter((t) => !assignedTeacherIds.has(t.id));
+  }, [teachers, assignedTeacherIds, selectedCourseId]);
 
   // Fetch teachers
   const fetchTeachers = useCallback(async () => {
@@ -147,30 +264,18 @@ const AdminAssignTeacher = () => {
     <>
       <PageMeta
         title="Gán giáo viên vào khóa học"
-        description="Phân công giáo viên phụ trách các khóa học"
+        description="Chọn khóa học, chọn giáo viên và xác nhận để gán"
       />
-      <div className="space-y-4">
+      <div className="space-y-4 text-base">
         {/* Breadcrumb */}
         <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex text-sm text-gray-600">
+          <nav className="flex text-base text-gray-600">
             <Link to="/admin" className="hover:text-brand-600">
               Admin
             </Link>
             <span className="mx-2">/</span>
-            <span className="text-gray-900">Gán giáo viên</span>
+            <span className="text-gray-900">Gán giáo viên vào khóa học</span>
           </nav>
-        </div>
-
-        {/* Header */}
-        <div className="rounded-2xl bg-white p-6 shadow-card">
-          <div>
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Gán giáo viên vào khóa học
-            </h1>
-            <p className="mt-1 text-sm text-gray-600">
-              Phân công giáo viên phụ trách các khóa học trên hệ thống
-            </p>
-          </div>
         </div>
 
         {/* Success Message */}
@@ -190,7 +295,9 @@ const AdminAssignTeacher = () => {
                   d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                 />
               </svg>
-              <p className="text-sm font-semibold text-green-800">{success}</p>
+              <p className="text-base font-semibold text-green-800">
+                {success}
+              </p>
             </div>
           </div>
         )}
@@ -198,157 +305,253 @@ const AdminAssignTeacher = () => {
         {/* Error Message */}
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 p-4">
-            <p className="text-sm font-semibold text-red-800">{error}</p>
+            <p className="text-base font-semibold text-red-800">{error}</p>
           </div>
         )}
 
         {/* Loading State */}
         {loading && (
-          <div className="flex items-center justify-center py-8">
-            <div className="flex flex-col items-center gap-3">
-              <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
-              <p className="text-sm font-medium text-gray-700">
-                Đang tải dữ liệu...
-              </p>
-            </div>
+          <div className="py-4">
+            <AdminLoading message="Đang tải danh sách khóa học và giáo viên..." />
           </div>
         )}
 
-        {/* Form */}
+        {/* Steps 1-3: chọn khóa học, chọn giáo viên, bấm submit */}
         {!loading && (
-          <div className="rounded-2xl bg-white p-6 shadow-card">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Course Selection */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-800">
-                  Chọn khóa học <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedCourseId}
-                  onChange={(e) => {
-                    setSelectedCourseId(e.target.value);
-                    setError(null);
-                    setSuccess(null);
-                  }}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  required
-                >
-                  <option value="">-- Chọn khóa học --</option>
-                  {courses.map((course) => (
-                    <option key={course.id} value={course.id}>
-                      {course.code ? `[${course.code}] ` : ""}
-                      {course.title}
-                    </option>
-                  ))}
-                </select>
-                {selectedCourse && (
-                  <p className="mt-2 text-xs text-gray-600">
-                    Mã khóa học: {selectedCourse.code || "Chưa có mã"}
+          <form onSubmit={handleSubmit} className="space-y-6 text-base">
+            {/* Step 1: chọn khóa học */}
+            <div className="rounded-2xl bg-white p-6 shadow-card">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    1. Chọn khóa học
+                  </h2>
+                  <p className="mt-1 text-base text-gray-600">
+                    Chọn một khóa học mà bạn muốn gán giáo viên vào.
                   </p>
-                )}
+                </div>
+                <span className="text-base text-gray-500">
+                  Tổng: <strong>{courses.length}</strong> khóa học
+                </span>
               </div>
 
-              {/* Teacher Selection */}
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-gray-800">
-                  Chọn giáo viên <span className="text-red-500">*</span>
-                </label>
-                <select
-                  value={selectedTeacherId}
-                  onChange={(e) => {
-                    setSelectedTeacherId(e.target.value);
-                    setError(null);
-                    setSuccess(null);
-                  }}
-                  className="w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
-                  required
-                >
-                  <option value="">-- Chọn giáo viên --</option>
-                  {teachers.map((teacher) => (
-                    <option key={teacher.id} value={teacher.id}>
-                      {teacher.firstName} {teacher.lastName} ({teacher.email})
-                    </option>
-                  ))}
-                </select>
-                {selectedTeacher && (
-                  <p className="mt-2 text-xs text-gray-600">
-                    Email: {selectedTeacher.email}
-                  </p>
+              <div className="overflow-hidden rounded-xl border border-gray-100">
+                <table className="min-w-full divide-y divide-gray-200 text-base">
+                  <thead className="bg-gray-50 text-base uppercase text-gray-600">
+                    <tr>
+                      <th className="px-4 py-3 text-left font-medium tracking-wider">
+                        Chọn
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium tracking-wider">
+                        Khóa học
+                      </th>
+                      <th className="px-4 py-3 text-left font-medium tracking-wider">
+                        Mã khóa
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white text-base">
+                    {courses.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={3}
+                          className="px-4 py-4 text-center text-base text-gray-500"
+                        >
+                          Chưa có khóa học nào đang hoạt động.
+                        </td>
+                      </tr>
+                    )}
+                    {pagedCourses.map((course) => (
+                      <tr
+                        key={course.id}
+                        className={`cursor-pointer hover:bg-brand-50 ${
+                          selectedCourseId === course.id ? "bg-brand-50" : ""
+                        }`}
+                        onClick={() => {
+                          setSelectedCourseId(course.id);
+                          setError(null);
+                          setSuccess(null);
+                        }}
+                      >
+                        <td className="px-4 py-3">
+                          <input
+                            type="radio"
+                            className="h-4 w-4 text-brand-500"
+                            checked={selectedCourseId === course.id}
+                            onChange={() => {
+                              setSelectedCourseId(course.id);
+                              setError(null);
+                              setSuccess(null);
+                            }}
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-base text-gray-900">
+                          {course.title}
+                        </td>
+                        <td className="px-4 py-3 text-base font-mono text-gray-700">
+                          {course.code || "Chưa có mã"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {courses.length > 0 && (
+                  <AdminPagination
+                    page={coursePage}
+                    totalPages={totalCoursePages}
+                    onPageChange={(p) => setCoursePage(p)}
+                  />
                 )}
               </div>
+            </div>
 
-              {/* Summary */}
-              {selectedCourse && selectedTeacher && (
-                <div className="rounded-lg bg-brand-50 border border-brand-200 p-4">
-                  <h3 className="text-sm font-semibold text-brand-900 mb-2">
-                    Xác nhận thông tin:
-                  </h3>
-                  <div className="space-y-1 text-sm text-gray-700">
-                    <p>
-                      <span className="font-semibold">Khóa học:</span>{" "}
-                      {selectedCourse.code ? `[${selectedCourse.code}] ` : ""}
-                      {selectedCourse.title}
-                    </p>
-                    <p>
-                      <span className="font-semibold">Giáo viên:</span>{" "}
-                      {selectedTeacher.firstName} {selectedTeacher.lastName} (
-                      {selectedTeacher.email})
+            {/* Step 2: chọn giáo viên */}
+            {selectedCourseId && (
+              <div className="rounded-2xl bg-white p-6 shadow-card">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900">
+                      2. Chọn giáo viên
+                    </h2>
+                    <p className="mt-1 text-base text-gray-600">
+                      Chọn một giáo viên sẽ phụ trách khóa học đã chọn.
                     </p>
                   </div>
+                  <span className="text-base text-gray-500">
+                    Tổng: <strong>{availableTeachers.length}</strong> giáo viên
+                    khả dụng
+                  </span>
                 </div>
-              )}
 
-              {/* Submit Button */}
-              <div className="flex gap-3 pt-4">
-                <Link
-                  to="/admin/courses"
-                  className="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-sm font-semibold text-gray-700 hover:bg-gray-50"
-                >
-                  Hủy bỏ
-                </Link>
-                <button
-                  type="submit"
-                  disabled={
-                    submitting || !selectedCourseId || !selectedTeacherId
-                  }
-                  className="rounded-lg bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting ? "Đang gán..." : "Gán giáo viên"}
-                </button>
+                <div className="overflow-hidden rounded-xl border border-gray-100">
+                  {instancesLoading && (
+                    <AdminLoading
+                      message="Đang tải thông tin gán lớp để lọc giáo viên..."
+                      minHeight={80}
+                    />
+                  )}
+                  {instancesError && !instancesLoading && (
+                    <div className="border-b border-gray-200 bg-red-50 px-4 py-2 text-base font-semibold text-red-700">
+                      {instancesError}
+                    </div>
+                  )}
+                  <table className="min-w-full divide-y divide-gray-200 text-base">
+                    <thead className="bg-gray-50 text-base uppercase text-gray-600">
+                      <tr>
+                        <th className="px-4 py-3 text-left font-medium tracking-wider">
+                          Chọn
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium tracking-wider">
+                          Họ tên
+                        </th>
+                        <th className="px-4 py-3 text-left font-medium tracking-wider">
+                          Email
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 bg-white text-base">
+                      {availableTeachers.length === 0 && (
+                        <tr>
+                          <td
+                            colSpan={3}
+                            className="px-4 py-4 text-center text-base text-gray-500"
+                          >
+                            Không còn giáo viên nào chưa được gán cho khóa này.
+                          </td>
+                        </tr>
+                      )}
+                      {pagedTeachers
+                        .filter((t) => !assignedTeacherIds.has(t.id))
+                        .map((teacher) => (
+                          <tr
+                            key={teacher.id}
+                            className={`cursor-pointer hover:bg-brand-50 ${
+                              selectedTeacherId === teacher.id
+                                ? "bg-brand-50"
+                                : ""
+                            }`}
+                            onClick={() => {
+                              setSelectedTeacherId(teacher.id);
+                              setError(null);
+                              setSuccess(null);
+                            }}
+                          >
+                            <td className="px-4 py-3">
+                              <input
+                                type="radio"
+                                className="h-4 w-4 text-brand-500"
+                                checked={selectedTeacherId === teacher.id}
+                                onChange={() => {
+                                  setSelectedTeacherId(teacher.id);
+                                  setError(null);
+                                  setSuccess(null);
+                                }}
+                              />
+                            </td>
+                            <td className="px-4 py-3 text-base text-gray-900">
+                              {teacher.firstName} {teacher.lastName}
+                            </td>
+                            <td className="px-4 py-3 text-base text-gray-700">
+                              {teacher.email}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+
+                  {availableTeachers.length > 0 && (
+                    <AdminPagination
+                      page={teacherPage}
+                      totalPages={Math.max(
+                        1,
+                        Math.ceil(availableTeachers.length / pageSize) || 1
+                      )}
+                      onPageChange={(p) => setTeacherPage(p)}
+                    />
+                  )}
+                </div>
               </div>
-            </form>
-          </div>
-        )}
+            )}
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
-              Tổng khóa học
-            </p>
-            <p className="text-3xl font-bold text-brand-700">
-              {courses.length}
-            </p>
-            <p className="text-sm text-gray-600">Đang hoạt động</p>
-          </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
-              Tổng giáo viên
-            </p>
-            <p className="text-3xl font-bold text-green-600">
-              {teachers.length}
-            </p>
-            <p className="text-sm text-gray-600">Đang hoạt động</p>
-          </div>
-          <div className="rounded-2xl bg-white p-5 shadow-card">
-            <p className="text-xs font-semibold uppercase text-gray-500">
-              Hướng dẫn
-            </p>
-            <p className="text-sm text-gray-600">
-              Chọn khóa học và giáo viên, sau đó nhấn "Gán giáo viên"
-            </p>
-          </div>
-        </div>
+            {/* Step 3: xác nhận gán */}
+            {selectedCourse && selectedTeacher && (
+              <div className="rounded-2xl bg-brand-50 border border-brand-200 p-4">
+                <h3 className="text-base font-semibold text-brand-900 mb-2">
+                  3. Xác nhận thông tin trước khi gán
+                </h3>
+                <div className="space-y-1 text-base text-gray-700">
+                  <p>
+                    <span className="font-semibold">Khóa học:</span>{" "}
+                    {selectedCourse.code ? `[${selectedCourse.code}] ` : ""}
+                    {selectedCourse.title}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Giáo viên:</span>{" "}
+                    {selectedTeacher.firstName} {selectedTeacher.lastName} (
+                    {selectedTeacher.email})
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Link
+                to="/admin/courses"
+                className="rounded-lg border border-gray-300 bg-white px-6 py-2.5 text-base font-semibold text-gray-700 hover:bg-gray-50"
+              >
+                Hủy bỏ
+              </Link>
+              <button
+                type="submit"
+                disabled={submitting || !selectedCourseId || !selectedTeacherId}
+                className="rounded-lg bg-brand-500 px-6 py-2.5 text-base font-semibold text-white hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {submitting ? "Đang gán..." : "Gán giáo viên vào khóa học"}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
     </>
   );

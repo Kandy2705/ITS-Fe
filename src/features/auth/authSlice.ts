@@ -49,7 +49,7 @@ const authSlice = createSlice({
       state.userToken = null;
       state.error = null;
       localStorage.removeItem("accessToken");
-      localStorage.removeItem("userInfo");
+      localStorage.removeItem("user");
     },
   },
   extraReducers: (builder) => {

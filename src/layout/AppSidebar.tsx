@@ -32,9 +32,12 @@ const navItems: NavItem[] = [
     name: "Admin",
     subItems: [
       { name: "Quản lý người dùng", path: "/admin/users" },
-      { name: "Quản lý khóa học", path: "/admin/courses/list" },
+      { name: "Quản lý khóa học", path: "/admin/courses" },
+      { name: "Danh sách lớp học", path: "/admin/courses/instances" },
+      { name: "Gán sinh viên vào lớp", path: "/admin/course-instances/enroll" },
       { name: "Gán giáo viên", path: "/admin/assign-teacher" },
-      { name: "Phân quyền", path: "/admin/content" },
+      { name: "Tạo khoá học", path: "/admin/courses/new" },
+      // { name: "Phân quyền", path: "/admin/content" },
       // { name: "Báo cáo khóa học", path: "/admin/analytics" },
     ],
   },
@@ -67,7 +70,7 @@ const navItems: NavItem[] = [
     subItems: [
       // { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
       // { name: "Khoá học của tôi", path: "/lms/courses" },
-      { name: "Tạo khoá học", path: "/lms/courses/new" },
+
       // { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
       { name: "Chi tiết file", path: "/lms/courses/demo/files/slide" },
       { name: "Tạo chương trình", path: "/lms/programs/new" },

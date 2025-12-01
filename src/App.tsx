@@ -21,13 +21,14 @@ import MyCourses from "./pages/Lms/MyCourses";
 import CourseDetail from "./pages/Lms/CourseDetail";
 import FileDetail from "./pages/Lms/FileDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
-import AdminCourses from "./pages/Admin/AdminCourses";
+import AdminUserDetail from "./pages/Admin/AdminUserDetail";
 import AdminCoursesList from "./pages/Admin/AdminCoursesList";
 import AdminCourseDetail from "./pages/Admin/AdminCourseDetail";
-import AdminNewCourse from "./pages/Admin/AdminNewCourse";
 import AdminAssignTeacher from "./pages/Admin/AdminAssignTeacher";
 import CourseMembers from "./pages/Admin/CourseMembers";
-import NewCourse from "./pages/Lms/NewCourse";
+import AdminCourseInstances from "./pages/Admin/AdminCourseInstances";
+import AdminEnrollStudents from "./pages/Admin/AdminEnrollStudents";
+import NewCourse from "./pages/Admin/NewCourse";
 import ProgramBuilder from "./pages/Lms/ProgramBuilder";
 import ExerciseCreator from "./pages/Lms/ExerciseCreator";
 import QuizBuilder from "./pages/Lms/QuizBuilder";
@@ -79,7 +80,7 @@ export default function App() {
             {/* LMS Pages */}
             <Route path="/lms/auth" element={<AuthPortal />} />
             <Route path="/lms/courses" element={<MyCourses />} />
-            <Route path="/lms/courses/new" element={<NewCourse />} />
+
             <Route path="/lms/courses/:id" element={<CourseDetail />} />
             <Route
               path="/lms/courses/:id/files/:fileId"
@@ -89,12 +90,24 @@ export default function App() {
             <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
             <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/courses" element={<AdminCourses />} />
-            <Route path="/admin/courses/list" element={<AdminCoursesList />} />
+            <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+            <Route path="/admin/courses" element={<AdminCoursesList />} />
             <Route path="/admin/courses/:id" element={<AdminCourseDetail />} />
-            <Route path="/admin/courses/new" element={<AdminNewCourse />} />
+            <Route path="/admin/courses/new" element={<NewCourse />} />
             <Route
-              path="/admin/courses/:courseId/members"
+              path="/admin/courses/instances"
+              element={<AdminCourseInstances />}
+            />
+            <Route
+              path="/admin/courses/:courseId/instances"
+              element={<AdminCourseInstances />}
+            />
+            <Route
+              path="/admin/course-instances/enroll"
+              element={<AdminEnrollStudents />}
+            />
+            <Route
+              path="/admin/course-instances/:id"
               element={<CourseMembers />}
             />
             <Route
