@@ -211,6 +211,9 @@ const StudentCourseDetail = () => {
                 Nhập môn điện toán
               </h1>
               <p className="mt-1 text-sm text-gray-600">
+                Khóa học này giúp các bạn nắm vững kiến thức cơ bản về điện toán
+              </p>
+              <p className="mt-1 text-sm text-gray-600">
                 Giáo viên: TS. Nguyễn Văn A
               </p>
             </div>

@@ -1,365 +1,299 @@
-import { useMemo, useState } from "react";
-import { useParams, useLocation, useNavigate } from "react-router";
+import { useState } from "react";
+import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
 
-type MaterialFormat = "pdf" | "video" | "slide" | "link";
+type ContentType = "document" | "slide" | "video" | "image" | "reading";
+type ContentStatus = "active" | "inactive" | "hidden";
 
-const materialLabels: Record<MaterialFormat, string> = {
-  pdf: "PDF",
-  video: "Video",
-  slide: "Slide",
-  link: "Đường dẫn",
-};
+interface Content {
+  id: string;
+  courseInstanceId: string;
+  title: string;
+  description: string;
+  type: ContentType;
+  status: ContentStatus;
+  orderIndex: number;
+  dueDate: string | null;
+  allowAt: string;
+  allowedLate: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
 
-const comments = [
-  { name: "Sinh viên A", time: "5 phút trước", text: "File rõ ràng, nhưng có thể thêm ví dụ nâng cao?" },
-  { name: "Giảng viên", time: "1 giờ trước", text: "Đã thêm phần phụ lục ITS dự đoán câu hỏi thường gặp." },
-  { name: "ITS Bot", time: "Hôm qua", text: "Đề xuất luyện tập 15 phút với quiz chương 2." },
+const contents: Content[] = [
+  {
+    id: "c1",
+    courseInstanceId: "ci-1",
+    title: "Giới thiệu khoá học",
+    description: `<p><strong>Giới thiệu tổng quan về môn học</strong>, mục tiêu kiến thức, phạm vi nội dung và hướng dẫn cách sử dụng hệ thống ITS trong suốt quá trình học tập.</p>`,
+    type: "document",
+    status: "active",
+    orderIndex: 1,
+    dueDate: null,
+    allowAt: "2025-12-01T00:00:00Z",
+    allowedLate: false,
+    createdAt: "2025-11-25T10:00:00Z",
+    updatedAt: "2025-11-25T10:00:00Z",
+  },
+  // ... other content items
 ];
 
+const fileMeta = {
+  fileName: "bai-giang-chuong-1.pdf",
+  fileType: "PDF",
+  fileSize: "2.4 MB",
+};
+
+const formatDate = (iso: string | null) => {
+  if (!iso) return "Không giới hạn";
+  return new Date(iso).toLocaleString("vi-VN");
+};
+
+const getStatusLabel = (status: ContentStatus) => {
+  const map: Record<ContentStatus, string> = {
+    active: "Đang mở",
+    inactive: "Đã đóng",
+    hidden: "Chưa mở",
+  };
+  return map[status];
+};
+
+const getTypeLabel = (type: ContentType) => {
+  const map: Record<ContentType, string> = {
+    document: "Tài liệu (PDF/DOCX/TXT)",
+    slide: "Slide (PPTX)",
+    video: "Video bài giảng",
+    image: "Hình ảnh / infographic",
+    reading: "Bài đọc / chương",
+  };
+  return map[type];
+};
+
 const FileDetail = () => {
-  const { fileId } = useParams();
-  const location = useLocation();
+  const { courseId, materialId } = useParams();
+  const [showCopySuccess, setShowCopySuccess] = useState(false);
   const navigate = useNavigate();
-  const isUploadMode = location.pathname.includes('/upload');
-  
-  const [material, setMaterial] = useState({
-    title: "",
-    format: "pdf" as MaterialFormat,
-    description: "",
-    file: null as File | null,
-    link: "",
-  });
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setMaterial(prev => ({ ...prev, file: e.target.files![0] }));
-    }
+  const currentContent: Content =
+    contents.find((c) => c.id === materialId) ?? contents[0];
+
+  const statusLabel = getStatusLabel(currentContent.status);
+  const typeLabel = getTypeLabel(currentContent.type);
+
+  const handleEdit = () => {
+    navigate(`/teacher/courses/${courseId}/materials/${materialId}/edit`);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!material.title.trim()) return;
-    
-    setIsSubmitting(true);
-    
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Material uploaded:', material);
-      setIsSubmitting(false);
-      navigate('/teacher/content');
-    }, 1500);
-  };
-
-  const fileName = useMemo(() => fileId || "analysis-report.pdf", [fileId]);
-
-  if (isUploadMode) {
-    return (
-      <div className="max-w-4xl mx-auto">
-        <PageMeta
-          title="Đăng tải học liệu mới"
-          description="Tải lên tài liệu, video hoặc liên kết học tập mới"
-        />
-
-        <div className="mb-6">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center text-sm font-medium text-gray-600 hover:text-brand-600 mb-4"
-          >
-            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Quay lại
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">Đăng tải học liệu mới</h1>
-          <p className="text-gray-600">Chia sẻ tài liệu, video hoặc liên kết học tập với sinh viên</p>
-        </div>
-
-        <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-card">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Tiêu đề học liệu <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={material.title}
-                onChange={(e) => setMaterial(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Ví dụ: Bài giảng tuần 1 - Giới thiệu ReactJS"
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Định dạng <span className="text-red-500">*</span>
-              </label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {(Object.keys(materialLabels) as MaterialFormat[]).map((format) => (
-                  <label
-                    key={format}
-                    className={`flex items-center justify-center p-3 rounded-lg border-2 cursor-pointer transition ${
-                      material.format === format
-                        ? 'border-brand-500 bg-brand-50 text-brand-700'
-                        : 'border-gray-200 hover:border-gray-300 bg-white text-gray-700'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="format"
-                      value={format}
-                      checked={material.format === format}
-                      onChange={() => setMaterial(prev => ({ ...prev, format }))}
-                      className="sr-only"
-                    />
-                    <span className="text-sm font-medium">{materialLabels[format]}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Mô tả
-              </label>
-              <textarea
-                rows={4}
-                value={material.description}
-                onChange={(e) => setMaterial(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Mô tả ngắn gọn về học liệu này..."
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-              />
-            </div>
-
-            {material.format === 'link' ? (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Đường dẫn <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="url"
-                  value={material.link}
-                  onChange={(e) => setMaterial(prev => ({ ...prev, link: e.target.value }))}
-                  placeholder="https://example.com/learning-material"
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2.5 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                  required={material.format === 'link'}
-                />
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Tệp đính kèm <span className="text-red-500">*</span>
-                </label>
-                <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-dashed border-gray-300 rounded-lg">
-                  <div className="space-y-1 text-center">
-                    <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
-                      stroke="currentColor"
-                      fill="none"
-                      viewBox="0 0 48 48"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                    <div className="flex text-sm text-gray-600">
-                      <label
-                        htmlFor="file-upload"
-                        className="relative cursor-pointer bg-white rounded-md font-medium text-brand-600 hover:text-brand-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-brand-500"
-                      >
-                        <span>Tải lên file</span>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          className="sr-only"
-                          onChange={handleFileChange}
-                          accept={
-                            material.format === 'pdf' ? '.pdf' : 
-                            material.format === 'video' ? 'video/*' : 
-                            material.format === 'slide' ? '.ppt,.pptx,.odp' : 
-                            ''
-                          }
-                        />
-                      </label>
-                      <p className="pl-1">hoặc kéo thả vào đây</p>
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {material.format === 'pdf' 
-                        ? 'PDF tối đa 10MB' 
-                        : material.format === 'video' 
-                          ? 'MP4, MOV tối đa 100MB' 
-                          : 'PPT, PPTX, ODP tối đa 20MB'}
-                    </p>
-                  </div>
-                </div>
-                {material.file && (
-                  <div className="mt-2 flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 bg-gray-100 p-2 rounded-md">
-                        <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">{material.file.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(material.file.size / 1024 / 1024).toFixed(1)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setMaterial(prev => ({ ...prev, file: null }))}
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <span className="sr-only">Xoá</span>
-                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-              <button
-                type="button"
-                onClick={() => navigate('/teacher/content')}
-                className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
-              >
-                Huỷ bỏ
-              </button>
-              <button
-                type="submit"
-                disabled={isSubmitting || !material.title.trim()}
-                className="px-6 py-2.5 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? 'Đang tải lên...' : 'Đăng tải'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  }
-
-  // Original FileDetail view mode
   return (
     <>
       <PageMeta
-        title="Chi tiết file"
-        description="Xem nội dung, nhận xét và đề xuất ITS cho từng tài liệu"
+        title={`${currentContent.title} - Tài liệu học tập`}
+        description="Xem và quản lý tài liệu học tập"
       />
+
       <div className="grid gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2 space-y-4">
+        <div className="space-y-4 lg:col-span-2">
           <div className="rounded-2xl bg-white p-6 shadow-card">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-sm text-gray-500">Tài liệu trong khoá học</p>
-                <h2 className="text-xl font-semibold text-gray-900">{fileName}</h2>
-                <p className="text-sm text-gray-600">Dung lượng: 1.2MB • Cập nhật bởi giảng viên</p>
-              </div>
-              <div className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Có ITS gợi ý</div>
-            </div>
-
-            <div className="mt-4 grid gap-3 md:grid-cols-3">
-              <div className="rounded-lg border border-gray-200 p-3 text-sm">
-                <p className="text-xs font-semibold uppercase text-gray-500">Loại nội dung</p>
-                <p className="font-semibold text-gray-900">PDF - Slide bài giảng</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3 text-sm">
-                <p className="text-xs font-semibold uppercase text-gray-500">Dành cho</p>
-                <p className="font-semibold text-gray-900">Sinh viên & Giảng viên</p>
-              </div>
-              <div className="rounded-lg border border-gray-200 p-3 text-sm">
-                <p className="text-xs font-semibold uppercase text-gray-500">Trạng thái</p>
-                <p className="font-semibold text-gray-900">Đã phát hành</p>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl bg-gray-50 p-4 text-sm text-gray-700">
-              <p className="font-semibold text-gray-900">Tóm tắt nhanh</p>
-              <p className="mt-1">
-                ITS nhận diện đây là tài liệu quan trọng cho tuần 3. Hệ thống đề xuất sinh viên đọc hết mục 2 & 3 trước
-                khi làm bài lab để tiết kiệm 20% thời gian tìm hiểu.
-              </p>
-              <div className="mt-3 flex flex-wrap gap-2 text-xs font-semibold">
-                <span className="rounded-full bg-brand-50 px-3 py-1 text-brand-700">Gợi ý ITS</span>
-                <span className="rounded-full bg-orange-50 px-3 py-1 text-orange-700">Có quiz liên quan</span>
-                <span className="rounded-full bg-gray-200 px-3 py-1 text-gray-800">Phù hợp tự học</span>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-xl border border-dashed border-gray-200 p-6 text-center text-sm text-gray-600">
-              <p className="text-base font-semibold text-gray-900">Preview nội dung</p>
-              <p className="mt-1">(Placeholder) Khu vực này hiển thị nội dung file hoặc video nhúng.</p>
-              <div className="mt-4 h-40 rounded-lg bg-gray-100" />
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white p-6 shadow-card">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Nhận xét & Trao đổi</h3>
-              <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white">Thêm nhận xét</button>
-            </div>
-            <div className="mt-4 space-y-3">
-              {comments.map((comment) => (
-                <div key={comment.time} className="rounded-xl border border-gray-200 p-3">
-                  <div className="flex items-center justify-between text-sm text-gray-700">
-                    <p className="font-semibold text-gray-900">{comment.name}</p>
-                    <span>{comment.time}</span>
-                  </div>
-                  <p className="mt-1 text-gray-700">{comment.text}</p>
-                  <div className="mt-2 flex gap-2 text-xs font-semibold text-brand-600">
-                    <button className="rounded-full bg-brand-50 px-3 py-1">Trả lời</button>
-                    <button className="rounded-full bg-gray-100 px-3 py-1 text-gray-800">Đánh dấu quan trọng</button>
-                  </div>
+                <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+                  <span className="rounded-md bg-blue-100 px-2 py-1 font-medium text-blue-800">
+                    {typeLabel}
+                  </span>
+                  <span
+                    className={`rounded-md px-2 py-1 font-medium ${
+                      currentContent.status === "active"
+                        ? "bg-green-100 text-green-800"
+                        : currentContent.status === "hidden"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {statusLabel}
+                  </span>
                 </div>
-              ))}
+                <h2 className="text-xl font-semibold text-gray-900">
+                  {currentContent.title}
+                </h2>
+                <div
+                  className="mt-1 text-sm text-gray-600 prose prose-sm max-w-none"
+                  dangerouslySetInnerHTML={{
+                    __html: currentContent.description,
+                  }}
+                />
+              </div>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex-1 min-w-0">{/* Content here */}</div>
+                <div className="flex-shrink-0 flex gap-2">
+                  <button
+                    onClick={handleEdit}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                  >
+                    Chỉnh sửa
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
+              <div className="rounded-xl border border-gray-200 p-3">
+                <p className="text-xs font-semibold uppercase text-gray-500">
+                  Hạn xem
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {formatDate(currentContent.dueDate)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {currentContent.dueDate
+                    ? currentContent.allowedLate
+                      ? "Cho phép truy cập sau hạn"
+                      : "Tự động ẩn sau hạn"
+                    : "Không giới hạn thời gian"}
+                </p>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <p className="text-xs font-semibold uppercase text-gray-500">
+                  Cập nhật lần cuối
+                </p>
+                <p className="text-sm font-semibold text-gray-900">
+                  {formatDate(currentContent.updatedAt)}
+                </p>
+                <p className="text-xs text-gray-500">
+                  Bởi {currentContent.updatedAt || "Hệ thống"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Xem trước tài liệu
+                </h3>
+              </div>
+              <div className="mt-3 flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-center">
+                <div>
+                  <p className="text-sm font-medium text-gray-900">
+                    Xem trước tài liệu {fileMeta.fileType}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Trình đọc PDF/Slide sẽ được hiển thị tại đây
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="space-y-4">
           <div className="rounded-2xl bg-white p-5 shadow-card">
-            <h3 className="text-lg font-semibold text-gray-900">Hành động nhanh</h3>
-            <div className="mt-3 space-y-2 text-sm text-gray-700">
-              <button className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50">
-                Tải xuống file
+            <h3 className="text-lg font-semibold text-gray-900">
+              Thông tin tệp
+            </h3>
+            <div className="mt-3 space-y-3 text-sm text-gray-700">
+              <div>
+                <p className="font-medium text-gray-900">Tên tệp</p>
+                <p className="text-gray-600">{fileMeta.fileName}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Loại nội dung</p>
+                <p className="text-gray-600">{typeLabel}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Loại tệp</p>
+                <p className="text-gray-600">{fileMeta.fileType}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Kích thước</p>
+                <p className="text-gray-600">{fileMeta.fileSize}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Ngày tạo</p>
+                <p className="text-gray-600">
+                  {formatDate(currentContent.createdAt)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 space-y-2 border-t border-gray-200 pt-4">
+              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50">
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+                Tải xuống tài liệu
               </button>
-              <button className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50">
-                Gửi qua email
-              </button>
-              <button className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50">
-                Tạo quiz từ tài liệu
+              <button
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    setShowCopySuccess(true);
+                    setTimeout(() => setShowCopySuccess(false), 2000);
+                  } catch (err) {
+                    console.error("Failed to copy URL: ", err);
+                  }
+                }}
+                className="group relative flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
+              >
+                <svg
+                  className="h-4 w-4 text-gray-500 group-hover:text-brand-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                  />
+                </svg>
+                Chia sẻ với sinh viên
+                {showCopySuccess && (
+                  <div className="absolute -top-12 left-1/2 -translate-x-1/2 transform rounded-xl border border-success-500 bg-success-50 px-4 py-2 text-sm font-medium text-success-800 shadow-lg">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        className="h-4 w-4 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      Đã sao chép liên kết!
+                    </div>
+                  </div>
+                )}
               </button>
             </div>
           </div>
 
           <div className="rounded-2xl bg-white p-5 shadow-card">
-            <h3 className="text-lg font-semibold text-gray-900">Gợi ý bổ sung</h3>
-            <ul className="mt-3 space-y-2 text-sm text-gray-700">
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                ITS gợi ý thêm video hướng dẫn 10 phút.
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                Gửi thông báo cho sinh viên chưa xem file.
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                Xuất báo cáo lượt xem ra PDF/Excel.
-              </li>
-            </ul>
+            <h3 className="text-lg font-semibold text-gray-900">
+              Thống kê truy cập
+            </h3>
+            <div className="mt-3 space-y-3 text-sm text-gray-700">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Lượt xem</span>
+                <span className="font-medium text-gray-900">1,245</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Lượt tải về</span>
+                <span className="font-medium text-gray-900">892</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

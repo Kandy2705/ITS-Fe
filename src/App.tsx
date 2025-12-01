@@ -21,7 +21,6 @@ import Home from "./pages/Dashboard/Home";
 import AuthPortal from "./pages/Lms/AuthPortal";
 import MyCourses from "./pages/Lms/MyCourses";
 import CourseDetail from "./pages/Lms/CourseDetail";
-import FileDetail from "./pages/Lms/FileDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminCourses from "./pages/Admin/AdminCourses";
 import AdminNewCourse from "./pages/Admin/AdminNewCourse";
@@ -45,6 +44,7 @@ import StudentFileDetail from "./pages/Student/FileDetail";
 import StudentLearningContent from "./pages/Student/StudentLearningContent";
 import StudentSubmissionHistory from "./pages/Student/StudentSubmissionHistory";
 import AdminLearningContent from "./pages/Admin/AdminLearningContent";
+import FileDetail from "./pages/Teacher/FileDetail";
 
 export default function App() {
   return (
@@ -84,33 +84,69 @@ export default function App() {
             <Route path="/lms/courses" element={<MyCourses />} />
             <Route path="/lms/courses/new" element={<NewCourse />} />
             <Route path="/lms/courses/:id" element={<CourseDetail />} />
-            <Route path="/lms/courses/:id/files/:fileId" element={<FileDetail />} />
             <Route path="/lms/programs/new" element={<ProgramBuilder />} />
             <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
             <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/courses" element={<AdminCourses />} />
             <Route path="/admin/courses/new" element={<AdminNewCourse />} />
-            <Route path="/admin/courses/:courseId/members" element={<CourseMembers />} />
+            <Route
+              path="/admin/courses/:courseId/members"
+              element={<CourseMembers />}
+            />
             <Route path="/admin/content" element={<AdminLearningContent />} />
 
             {/* Teacher Routes */}
             <Route path="/teacher/courses" element={<TeacherCourses />} />
             <Route path="/teacher/courses/new" element={<TeacherNewCourse />} />
-            <Route path="/teacher/courses/:id" element={<TeacherCourseDetail />} />
-            <Route path="/teacher/courses/:courseId/files/:fileId" element={<TeacherFileDetail />} />
-            <Route path="/teacher/content" element={<TeacherLearningContent />} />
-            <Route path="/teacher/content/upload" element={<TeacherUploadMaterial />} />
-            <Route path="/teacher/content/edit" element={<TeacherEditMaterial />} />
+            <Route
+              path="/teacher/courses/:id"
+              element={<TeacherCourseDetail />}
+            />
+            <Route
+              path="/teacher/courses/:courseId/files/:fileId"
+              element={<TeacherFileDetail />}
+            />
+            <Route
+              path="/teacher/content"
+              element={<TeacherLearningContent />}
+            />
+            <Route
+              path="/teacher/content/upload"
+              element={<TeacherUploadMaterial />}
+            />
             <Route path="/teacher/document" element={<TeacherDocument />} />
-            <Route path="/teacher/assignments" element={<TeacherAssignments />} />
+            <Route
+              path="/teacher/assignments"
+              element={<TeacherAssignments />}
+            />
+            <Route
+              path="/teacher/courses/:courseId/materials/:materialId"
+              element={<FileDetail />}
+            />
+            <Route
+              path="/teacher/courses/:courseId/materials/:materialId/edit"
+              element={<TeacherEditMaterial />}
+            />
 
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />
-            <Route path="/student/courses/:id" element={<StudentCourseDetail />} />
-            <Route path="/student/courses/:courseId/files/:fileId" element={<StudentFileDetail />} />
-            <Route path="/student/content" element={<StudentLearningContent />} />
-            <Route path="/student/submissions" element={<StudentSubmissionHistory />} />
+            <Route
+              path="/student/courses/:id"
+              element={<StudentCourseDetail />}
+            />
+            <Route
+              path="/student/courses/:courseId/files/:fileId"
+              element={<StudentFileDetail />}
+            />
+            <Route
+              path="/student/content"
+              element={<StudentLearningContent />}
+            />
+            <Route
+              path="/student/submissions"
+              element={<StudentSubmissionHistory />}
+            />
           </Route>
 
           {/* Auth Layout */}
