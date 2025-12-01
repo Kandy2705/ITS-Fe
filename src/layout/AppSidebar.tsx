@@ -32,7 +32,8 @@ const navItems: NavItem[] = [
     name: "Admin",
     subItems: [
       { name: "Quản lý người dùng", path: "/admin/users" },
-      { name: "Quản lý khóa học", path: "/admin/courses" },
+      { name: "Quản lý khóa học", path: "/admin/courses/list" },
+      { name: "Gán giáo viên", path: "/admin/assign-teacher" },
       { name: "Phân quyền", path: "/admin/content" },
       // { name: "Báo cáo khóa học", path: "/admin/analytics" },
     ],
