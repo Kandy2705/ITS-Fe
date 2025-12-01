@@ -68,7 +68,8 @@ const authSlice = createSlice({
 
       state.loading = false;
       state.userInfo = userInfo;
-      state.userToken = action.payload.token;
+      // Đồng bộ cách lấy token với cấu trúc response từ backend (data.token)
+      state.userToken = action.payload.data.token;
       state.success = true;
 
       localStorage.setItem("accessToken", action.payload.data.token);
@@ -78,7 +79,12 @@ const authSlice = createSlice({
     builder.addCase(loginUser.rejected, (state, action) => {
       state.loading = false;
       state.success = false;
-      state.error = action.payload.message ?? "Login failed";
+      // action.payload của createAsyncThunk trong nhánh rejectWithValue thường là string
+      state.error =
+        (typeof action.payload === "string"
+          ? action.payload
+          : (action.payload as { message?: string })?.message) ??
+        "Login failed";
     });
   },
 });

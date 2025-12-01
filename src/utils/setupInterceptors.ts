@@ -8,9 +8,12 @@ export const setupInterceptors = (api: AxiosInstance) => {
   api.interceptors.request.use(
     (config) => {
       const state = store.getState();
-      const token = state.auth.userToken;
+      // Ưu tiên token trong redux, fallback sang localStorage nếu cần
+      const token = state.auth.userToken || localStorage.getItem("accessToken");
 
       if (token) {
+        // Đảm bảo headers luôn tồn tại trước khi gán
+        config.headers = config.headers || {};
         config.headers.Authorization = `Bearer ${token}`;
       }
 
