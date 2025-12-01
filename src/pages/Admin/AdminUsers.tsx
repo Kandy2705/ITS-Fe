@@ -30,6 +30,12 @@ const AdminUsers = () => {
   const [statusFilter, setStatusFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
 
+  const totalUsers = userList?.totalElements ?? 0;
+  const totalTeachers =
+    userList?.content.filter((user) => user.role === "TEACHER").length ?? 0;
+  const totalStudents =
+    userList?.content.filter((user) => user.role === "STUDENT").length ?? 0;
+
   const fetchData = useCallback(
     async (page: number = 0) => {
       setLoading(true);
@@ -101,28 +107,36 @@ const AdminUsers = () => {
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-card">
             <p className="text-sm font-semibold uppercase text-gray-500">
-              Người dùng hoạt động
+              Tổng số người dùng
             </p>
-            <p className="text-3xl font-bold text-brand-700">1,240</p>
+            <p className="text-3xl font-bold text-brand-700">
+              {totalUsers.toLocaleString("vi-VN")}
+            </p>
             <p className="text-base text-gray-600">
-              Tăng 12% so với tuần trước
+              Tất cả tài khoản trong hệ thống
             </p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-card">
             <p className="text-sm font-semibold uppercase text-gray-500">
-              Tài khoản bị cảnh báo
+              Số lượng giảng viên
             </p>
-            <p className="text-3xl font-bold text-orange-600">32</p>
+            <p className="text-3xl font-bold text-orange-600">
+              {totalTeachers.toLocaleString("vi-VN")}
+            </p>
             <p className="text-base text-gray-600">
-              Cần kiểm tra hoạt động bất thường
+              Tài khoản có vai trò giảng viên
             </p>
           </div>
           <div className="rounded-2xl bg-white p-5 shadow-card">
             <p className="text-sm font-semibold uppercase text-gray-500">
-              Yêu cầu phê duyệt
+              Số lượng sinh viên
             </p>
-            <p className="text-3xl font-bold text-gray-900">7</p>
-            <p className="text-base text-gray-600">Đăng ký giảng viên mới</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {totalStudents.toLocaleString("vi-VN")}
+            </p>
+            <p className="text-base text-gray-600">
+              Tài khoản có vai trò sinh viên (trên trang hiện tại)
+            </p>
           </div>
         </div>
 
@@ -133,16 +147,8 @@ const AdminUsers = () => {
                 Danh sách người dùng
               </h2>
               <p className="text-base text-gray-600">
-                Admin có thể khoá, mở hoặc gửi báo cáo nhanh.
+                Admin có thể khoá, mở tài khoản người dùng.
               </p>
-            </div>
-            <div className="flex flex-wrap gap-2 text-base font-semibold text-gray-700">
-              <button className="rounded-full border border-gray-200 px-3 py-1 transition hover:border-brand-400 hover:bg-brand-50">
-                Xuất Excel
-              </button>
-              <button className="rounded-full border border-gray-200 px-3 py-1 transition hover:border-brand-400 hover:bg-brand-50">
-                Gửi báo cáo email
-              </button>
             </div>
           </div>
 
