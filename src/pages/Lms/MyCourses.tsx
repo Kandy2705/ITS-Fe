@@ -41,7 +41,9 @@ const mockCourses = [
 ];
 
 const MyCourses = () => {
-  const [viewRole, setViewRole] = useState<"student" | "teacher" | "all">("all");
+  const [viewRole, setViewRole] = useState<"student" | "teacher" | "all">(
+    "all"
+  );
 
   const filteredCourses = useMemo(() => {
     if (viewRole === "all") return mockCourses;
@@ -59,15 +61,20 @@ const MyCourses = () => {
           <div>
             <p className="text-sm text-gray-500">Góc nhìn theo vai trò</p>
             <h2 className="text-xl font-semibold text-gray-900">
-              Khoá học của tôi {viewRole !== "all" ? `- ${viewRole === "student" ? "Sinh viên" : "Giảng viên"}` : ""}
+              Khoá học của tôi{" "}
+              {viewRole !== "all"
+                ? `- ${viewRole === "student" ? "Sinh viên" : "Giảng viên"}`
+                : ""}
             </h2>
           </div>
           <div className="flex items-center gap-2 rounded-full bg-gray-100 p-1 text-sm font-semibold text-gray-700">
-            {([
-              { key: "all", label: "Tất cả" },
-              { key: "student", label: "Sinh viên" },
-              { key: "teacher", label: "Giảng viên" },
-            ] as const).map((option) => (
+            {(
+              [
+                { key: "all", label: "Tất cả" },
+                { key: "student", label: "Sinh viên" },
+                { key: "teacher", label: "Giảng viên" },
+              ] as const
+            ).map((option) => (
               <button
                 key={option.key}
                 onClick={() => setViewRole(option.key)}
@@ -83,13 +90,18 @@ const MyCourses = () => {
 
         <div className="grid gap-4 xl:grid-cols-2">
           {filteredCourses.map((course) => (
-            <div key={course.id} className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-card">
+            <div
+              key={course.id}
+              className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-card"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {course.role === "student" ? "Sinh viên" : "Giảng viên"}
                   </p>
-                  <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {course.title}
+                  </h3>
                   <p className="text-sm text-gray-600">{course.instructor}</p>
                 </div>
                 <div className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
@@ -99,7 +111,10 @@ const MyCourses = () => {
 
               <div className="flex flex-wrap gap-2 text-xs font-medium text-gray-700">
                 {course.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-gray-100 px-2 py-1">
+                  <span
+                    key={tag}
+                    className="rounded-full bg-gray-100 px-2 py-1"
+                  >
                     {tag}
                   </span>
                 ))}
@@ -113,7 +128,9 @@ const MyCourses = () => {
                 <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
                   <div
                     className={`h-full rounded-full ${
-                      course.role === "student" ? "bg-brand-500" : "bg-orange-500"
+                      course.role === "student"
+                        ? "bg-brand-500"
+                        : "bg-orange-500"
                     }`}
                     style={{ width: `${course.progress}%` }}
                   />

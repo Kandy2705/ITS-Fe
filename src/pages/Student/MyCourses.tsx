@@ -1,128 +1,227 @@
+import { useState, useMemo } from "react";
 import { Link } from "react-router";
-import PageMeta from "../../components/common/PageMeta";
+import { FiSearch, FiChevronDown, FiChevronUp } from "react-icons/fi";
+
+type SortOption =
+  | "progress-asc"
+  | "progress-desc"
+  | "code-asc"
+  | "code-desc"
+  | "title-asc"
+  | "title-desc";
 
 const studentCourses = [
   {
     id: "intro-ai",
+    courseCode: "CS101",
     title: "Nhập môn Trí tuệ nhân tạo",
     instructor: "TS. Nguyễn Huy",
     progress: 68,
-    nextItem: "Hoàn thành Lab 03 về tìm kiếm heuristic",
-    tags: ["AI", "Python", "Cơ bản"],
-    upcomingDeadline: "10/12/2023",
-    pendingTasks: 3,
+    credits: 3,
   },
   {
     id: "web-react",
+    courseCode: "WEB201",
     title: "Xây dựng SPA với React",
     instructor: "Cô Lê Mỹ An",
     progress: 42,
-    nextItem: "Xem video Hooks nâng cao",
-    tags: ["React", "Frontend", "UI"],
-    upcomingDeadline: "15/12/2023",
-    pendingTasks: 2,
+    credits: 4,
   },
   {
     id: "data-science",
+    courseCode: "DS301",
     title: "Khoa học dữ liệu cơ bản",
     instructor: "TS. Trần Văn Bình",
     progress: 35,
-    nextItem: "Hoàn thành bài tập phân tích dữ liệu",
-    tags: ["Data Science", "Python", "Pandas"],
-    upcomingDeadline: "05/12/2023",
-    pendingTasks: 4,
+    credits: 3,
   },
 ];
 
 const StudentCourses = () => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("title-asc");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+
+  const filteredAndSortedCourses = useMemo(() => {
+    let result = [...studentCourses];
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (course) =>
+          course.title.toLowerCase().includes(query) ||
+          course.instructor.toLowerCase().includes(query) ||
+          course.courseCode.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort courses
+    result.sort((a, b) => {
+      switch (sortBy) {
+        case "progress-asc":
+          return a.progress - b.progress;
+        case "progress-desc":
+          return b.progress - a.progress;
+        case "code-asc":
+          return a.courseCode.localeCompare(b.courseCode);
+        case "code-desc":
+          return b.courseCode.localeCompare(a.courseCode);
+        case "title-asc":
+          return a.title.localeCompare(b.title);
+        case "title-desc":
+          return b.title.localeCompare(a.title);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [searchQuery, sortBy]);
+
+  const getSortLabel = (): string => {
+    const sortLabels: Record<SortOption, string> = {
+      "progress-asc": "Tiến độ (tăng dần)",
+      "progress-desc": "Tiến độ (giảm dần)",
+      "code-asc": "Mã môn (A-Z)",
+      "code-desc": "Mã môn (Z-A)",
+      "title-asc": "Tên môn (A-Z)",
+      "title-desc": "Tên môn (Z-A)",
+    };
+    return sortLabels[sortBy];
+  };
+
   return (
     <>
-      <PageMeta
-        title="Khóa học của tôi"
-        description="Theo dõi tiến độ học tập và các khóa học đang tham gia"
-      />
       <div className="space-y-4">
-        <div className="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-card">
-          <h1 className="text-2xl font-bold text-gray-900">Khóa học của tôi</h1>
-          <p className="text-gray-600">Theo dõi tiến độ và các hoạt động học tập của bạn</p>
+        {/* Search and Sort Bar */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative flex-1">
+            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+              <FiSearch className="h-4 w-4 text-gray-400" />
+            </div>
+            <input
+              type="text"
+              className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+              placeholder="Tìm kiếm khóa học..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="relative">
+            <button
+              type="button"
+              className="inline-flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              onClick={() => setIsSortOpen(!isSortOpen)}
+            >
+              <span>{getSortLabel()}</span>
+              {isSortOpen ? (
+                <FiChevronUp className="ml-2 h-4 w-4" />
+              ) : (
+                <FiChevronDown className="ml-2 h-4 w-4" />
+              )}
+            </button>
+            {isSortOpen && (
+              <div className="absolute right-0 z-10 mt-1 w-56 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                <div className="py-1">
+                  {[
+                    { value: "title-asc", label: "Tên môn (A-Z)" },
+                    { value: "title-desc", label: "Tên môn (Z-A)" },
+                    { value: "code-asc", label: "Mã môn (A-Z)" },
+                    { value: "code-desc", label: "Mã môn (Z-A)" },
+                    { value: "progress-desc", label: "Tiến độ (cao nhất)" },
+                    { value: "progress-asc", label: "Tiến độ (thấp nhất)" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setSortBy(option.value as SortOption);
+                        setIsSortOpen(false);
+                      }}
+                      className={`block w-full px-4 py-2 text-left text-sm ${
+                        sortBy === option.value
+                          ? "bg-gray-100 text-gray-900"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="grid gap-4 xl:grid-cols-2">
-          {studentCourses.map((course) => (
-            <div key={course.id} className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-card">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-brand-600">
-                    Sinh viên
-                  </p>
-                  <Link to={`/student/courses/${course.id}`} className="hover:text-brand-600 transition-colors">
-                    <h3 className="text-lg font-semibold text-gray-900">{course.title}</h3>
-                  </Link>
-                  <p className="text-sm text-gray-600">{course.instructor}</p>
-                </div>
-                <div className="flex flex-col items-end">
-                  <div className="rounded-full bg-brand-100 px-3 py-1 text-xs font-semibold text-brand-700">
-                    Đang học
-                  </div>
-                  {course.pendingTasks > 0 && (
-                    <div className="mt-1 rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
-                      {course.pendingTasks} bài tập đang chờ
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2 text-xs font-medium text-gray-700">
-                {course.tags.map((tag) => (
-                  <span key={tag} className="rounded-full bg-gray-100 px-2 py-1">
-                    {tag}
-                  </span>
-                ))}
-              </div>
-
-              <div className="rounded-xl bg-gray-50 p-4">
-                <div className="flex items-center justify-between text-sm text-gray-700">
-                  <span>Tiến độ học tập</span>
-                  <span className="font-semibold">{course.progress}%</span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-brand-500"
-                    style={{ width: `${course.progress}%` }}
-                  />
-                </div>
-                <div className="mt-3 space-y-1 text-sm">
-                  <p className="text-gray-600">
-                    <span className="font-medium">Tiếp theo:</span> {course.nextItem}
-                  </p>
-                  <p className="text-gray-600">
-                    <span className="font-medium">Hạn chót:</span> {course.upcomingDeadline}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-2 text-sm md:grid-cols-2 lg:grid-cols-3">
-                <Link 
-                  to={`/student/courses/${course.id}`}
-                  className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
-                >
-                  Tiếp tục học
-                </Link>
-                <Link 
-                  to={`/student/courses/${course.id}?tab=assignments`}
-                  className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
-                >
-                  Bài tập
-                </Link>
-                <Link 
-                  to={`/student/courses/${course.id}?tab=materials`}
-                  className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
-                >
-                  Tài liệu
-                </Link>
-              </div>
+          {filteredAndSortedCourses.length === 0 ? (
+            <div className="col-span-2 rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+              <FiSearch className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">
+                Không tìm thấy khóa học
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Thử thay đổi từ khoá tìm kiếm
+              </p>
             </div>
-          ))}
+          ) : (
+            filteredAndSortedCourses.map((course) => (
+              <div
+                key={course.id}
+                className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-card"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800">
+                        {course.courseCode}
+                      </span>
+                      <Link
+                        to={`/student/courses/${course.id}`}
+                        className="hover:text-brand-600 transition-colors"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {course.title}
+                        </h3>
+                      </Link>
+                    </div>
+                    <div className="mt-1 flex items-center gap-4 text-sm text-gray-600">
+                      <span>{course.instructor}</span>
+                      <span className="text-gray-400">•</span>
+                      <span>{course.credits} tín chỉ</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-500">
+                      Đang hoạt động
+                    </div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl bg-gray-50 p-4">
+                  <div className="flex items-center justify-between text-sm text-gray-700">
+                    <span>Tiến độ học tập</span>
+                    <span className="font-semibold">{course.progress}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-brand-500"
+                      style={{ width: `${course.progress}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-2 text-sm md:grid-cols-2 lg:grid-cols-1">
+                  <Link
+                    to={`/student/courses/${course.id}`}
+                    className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold bg-blue-600 text-white transition hover:border-brand-400 hover:bg-blue-700"
+                  >
+                    Tiếp tục học
+                  </Link>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
     </>

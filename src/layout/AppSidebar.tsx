@@ -55,8 +55,8 @@ const navItems: NavItem[] = [
     name: "Học viên",
     subItems: [
       { name: "Khóa học của tôi", path: "/student/courses" },
-      { name: "Bài tập", path: "/student/content" },
-      { name: "Lịch sử bài tập", path: "/student/submissions" },
+      // { name: "Bài tập", path: "/student/content" },
+      // { name: "Lịch sử bài tập", path: "/student/submissions" },
       // { name: "Điểm số", path: "/student/grades" },
       // { name: "Thời khóa biểu", path: "/student/schedule" },
     ],
