@@ -45,7 +45,7 @@ const TeacherUploadMaterial = () => {
   return (
     <div className="max-w-4xl mx-auto">
       <PageMeta
-        title="Đăng tải học liệu mới"
+        title="Đăng tải tài liệu mới"
         description="Tải lên tài liệu, video hoặc liên kết học tập mới"
       />
 

@@ -41,12 +41,13 @@ const navItems: NavItem[] = [
     icon: <UserCircleIcon />,
     name: "Giáo viên",
     subItems: [
-      { name: "Khóa học của tôi", path: "/teacher/courses" },
       { name: "Tạo khóa học mới", path: "/teacher/courses/new" },
-      { name: "Lớp học", path: "/teacher/classes" },
-      { name: "Bài tập", path: "/teacher/assignments" },
-      { name: "Điểm số", path: "/teacher/grades" },
-      { name: "Test", path: "/teacher/content" },
+      { name: "Khóa học của tôi", path: "/teacher/courses" },
+      { name: "Kho tài liệu", path: "/teacher/document" },
+      // { name: "Lớp học", path: "/teacher/classes" },
+      { name: "Kho bài tập", path: "/teacher/assignments" },
+      // { name: "Điểm số", path: "/teacher/grades" },
+      // { name: "Test", path: "/teacher/content" },
     ],
   },
   {

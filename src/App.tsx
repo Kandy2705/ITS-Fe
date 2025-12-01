@@ -33,8 +33,12 @@ import QuizBuilder from "./pages/Lms/QuizBuilder";
 import TeacherCourses from "./pages/Teacher/MyCourses";
 import TeacherCourseDetail from "./pages/Teacher/CourseDetail";
 import TeacherFileDetail from "./pages/Teacher/FileDetail";
+import TeacherUploadMaterial from "./pages/Teacher/TeacherUploadMaterial";
 import TeacherNewCourse from "./pages/Teacher/TeacherNewCourse";
 import TeacherLearningContent from "./pages/Teacher/TeacherLearningContent";
+import TeacherDocument from "./pages/Teacher/TeacherDocument";
+import TeacherEditMaterial from "./pages/Teacher/TeacherEditMaterial";
+import TeacherAssignments from "./pages/Teacher/TeacherAssignments";
 import StudentCourses from "./pages/Student/MyCourses";
 import StudentCourseDetail from "./pages/Student/CourseDetail";
 import StudentFileDetail from "./pages/Student/FileDetail";
@@ -96,7 +100,10 @@ export default function App() {
             <Route path="/teacher/courses/:id" element={<TeacherCourseDetail />} />
             <Route path="/teacher/courses/:courseId/files/:fileId" element={<TeacherFileDetail />} />
             <Route path="/teacher/content" element={<TeacherLearningContent />} />
-            <Route path="/teacher/content/upload" element={<FileDetail />} />
+            <Route path="/teacher/content/upload" element={<TeacherUploadMaterial />} />
+            <Route path="/teacher/content/edit" element={<TeacherEditMaterial />} />
+            <Route path="/teacher/document" element={<TeacherDocument />} />
+            <Route path="/teacher/assignments" element={<TeacherAssignments />} />
 
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />
