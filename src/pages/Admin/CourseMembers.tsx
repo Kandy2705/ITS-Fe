@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminLoading from "../../components/common/AdminLoading";
 import AdminPagination from "../../components/common/AdminPagination";
 import { Modal } from "../../components/ui/modal";
@@ -739,19 +740,7 @@ const CourseMembers = () => {
       />
 
       <div className="space-y-4">
-        <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex text-sm text-gray-600">
-            <Link to="/admin" className="hover:text-brand-600">
-              Admin
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to="/admin/course-instances" className="hover:text-brand-600">
-              Danh sách lớp học
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900">Thành viên</span>
-          </nav>
-        </div>
+        <PageBreadcrumb pageTitle="Quản lý thành viên lớp học" />
 
         {renderInstanceSection()}
         {renderEnrollmentSection()}

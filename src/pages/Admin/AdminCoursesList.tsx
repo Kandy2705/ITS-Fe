@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import ReactPaginate from "react-paginate";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import api from "../../utils/api";
 import { PageResponse } from "../../interfaces/pagination";
+import AdminPagination from "../../components/common/AdminPagination";
+import { Eye, Pencil, Trash } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -86,9 +88,8 @@ const AdminCoursesList = () => {
     fetchCourses(0, searchQuery, statusFilter);
   }, [searchQuery, statusFilter, fetchCourses]);
 
-  const handlePageChange = (selectedItem: { selected: number }) => {
-    const newPage = selectedItem.selected;
-    fetchCourses(newPage, searchQuery, statusFilter);
+  const handlePageChange = (page: number) => {
+    fetchCourses(page, searchQuery, statusFilter);
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -131,6 +132,7 @@ const AdminCoursesList = () => {
         title="Danh sách khóa học"
         description="Quản lý toàn bộ khóa học trên hệ thống"
       />
+      <PageBreadcrumb pageTitle="Danh sách khóa học" />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-card border-2">
@@ -302,14 +304,21 @@ const AdminCoursesList = () => {
                             className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-1.5 text-sm font-medium text-blue-700 transition hover:bg-blue-100"
                             title="Xem chi tiết"
                           >
-                            Chi tiết
+                            <Eye />
+                          </Link>
+                          <Link
+                            to={`/admin/courses/${course.id}/edit`}
+                            className="rounded-lg border border-brand-100 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+                            title="Chỉnh sửa khóa học"
+                          >
+                            <Pencil />
                           </Link>
                           <button
                             onClick={() => handleDeleteCourse(course.id)}
                             className="rounded-lg border border-red-100 bg-red-50 px-3 py-1.5 text-sm font-medium text-red-700 transition hover:bg-red-100"
                             title="Xóa khóa học"
                           >
-                            Xóa
+                            <Trash />
                           </button>
                         </div>
                       </td>
@@ -331,37 +340,13 @@ const AdminCoursesList = () => {
             </table>
           </div>
 
-          {courseList && courseList.totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-center">
-              <ReactPaginate
-                previousLabel={
-                  <span className="inline-flex items-center gap-1 text-base font-semibold text-gray-700">
-                    Trước
-                  </span>
-                }
-                nextLabel={
-                  <span className="inline-flex items-center gap-1 text-base font-semibold text-gray-700">
-                    Sau
-                  </span>
-                }
-                breakLabel={
-                  <span className="px-2 text-base text-gray-500">...</span>
-                }
-                pageCount={courseList.totalPages}
-                pageRangeDisplayed={3}
-                marginPagesDisplayed={2}
+          {courseList && (
+            <div className="mt-6">
+              <AdminPagination
+                page={currentPage}
+                totalPages={courseList.totalPages}
                 onPageChange={handlePageChange}
-                forcePage={currentPage}
-                containerClassName="flex items-center gap-1"
-                pageLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition min-w-[40px] text-center"
-                previousClassName="mr-2"
-                previousLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
-                nextClassName="ml-2"
-                nextLinkClassName="px-3 py-2 text-base font-semibold text-gray-700 rounded-lg border border-gray-200 hover:border-brand-400 hover:bg-brand-50 transition"
-                breakLinkClassName="px-2 py-2 text-base text-gray-500"
-                activeLinkClassName="bg-brand-500 text-white border-brand-500 hover:bg-brand-600 hover:border-brand-600"
-                disabledClassName="opacity-50 cursor-not-allowed"
-                disabledLinkClassName="cursor-not-allowed hover:bg-transparent hover:border-gray-200"
+                disabled={loading}
               />
             </div>
           )}

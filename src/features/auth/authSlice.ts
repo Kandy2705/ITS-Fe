@@ -26,19 +26,32 @@ interface IUserLogin {
   password: string;
 }
 
-export const loginUser = createAsyncThunk(
-  "auth/login",
-  async (credentials: IUserLogin, { rejectWithValue }) => {
-    try {
-      const res = await api.post("/users/login", credentials);
-      return res.data;
-    } catch (err: any) {
-      const message =
-        err.response?.data?.message || err.message || "Login failed";
-      return rejectWithValue(message);
-    }
+export const loginUser = createAsyncThunk<
+  unknown,
+  IUserLogin,
+  { rejectValue: string }
+>("auth/login", async (credentials, { rejectWithValue }) => {
+  try {
+    const res = await api.post("/users/login", credentials);
+    return res.data as {
+      data: {
+        email: string;
+        firstName: string;
+        lastName: string;
+        role: string;
+        token: string;
+      };
+    };
+  } catch (err) {
+    const error = err as {
+      response?: { data?: { message?: string } };
+      message?: string;
+    };
+    const message =
+      error.response?.data?.message || error.message || "Login failed";
+    return rejectWithValue(message);
   }
-);
+});
 
 const authSlice = createSlice({
   name: "auth",
@@ -51,6 +64,23 @@ const authSlice = createSlice({
       localStorage.removeItem("accessToken");
       localStorage.removeItem("user");
     },
+    updateUserInfo(state, action) {
+      const current =
+        (state.userInfo as {
+          email?: string;
+          firstName?: string;
+          lastName?: string;
+          role?: string;
+        }) ?? {};
+
+      const updated = {
+        ...current,
+        ...action.payload,
+      };
+
+      state.userInfo = updated;
+      localStorage.setItem("user", JSON.stringify(updated));
+    },
   },
   extraReducers: (builder) => {
     builder.addCase(loginUser.pending, (state) => {
@@ -59,35 +89,40 @@ const authSlice = createSlice({
     });
 
     builder.addCase(loginUser.fulfilled, (state, action) => {
+      const payload = action.payload as {
+        data: {
+          email: string;
+          firstName: string;
+          lastName: string;
+          role: string;
+          token: string;
+        };
+      };
+
       const userInfo = {
-        email: action.payload.data.email,
-        firstName: action.payload.data.firstName,
-        lastName: action.payload.data.lastName,
-        role: action.payload.data.role,
+        email: payload.data.email,
+        firstName: payload.data.firstName,
+        lastName: payload.data.lastName,
+        role: payload.data.role,
       };
 
       state.loading = false;
       state.userInfo = userInfo;
       // Đồng bộ cách lấy token với cấu trúc response từ backend (data.token)
-      state.userToken = action.payload.data.token;
+      state.userToken = payload.data.token;
       state.success = true;
 
-      localStorage.setItem("accessToken", action.payload.data.token);
+      localStorage.setItem("accessToken", payload.data.token);
       localStorage.setItem("user", JSON.stringify(userInfo));
     });
 
     builder.addCase(loginUser.rejected, (state, action) => {
       state.loading = false;
       state.success = false;
-      // action.payload của createAsyncThunk trong nhánh rejectWithValue thường là string
-      state.error =
-        (typeof action.payload === "string"
-          ? action.payload
-          : (action.payload as { message?: string })?.message) ??
-        "Login failed";
+      state.error = action.payload ?? "Login failed";
     });
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, updateUserInfo } = authSlice.actions;
 export const authReducer = authSlice.reducer;

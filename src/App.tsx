@@ -26,6 +26,7 @@ import AdminUserEdit from "./pages/Admin/AdminUserEdit";
 import AdminUserCreate from "./pages/Admin/AdminUserCreate";
 import AdminCoursesList from "./pages/Admin/AdminCoursesList";
 import AdminCourseDetail from "./pages/Admin/AdminCourseDetail";
+import AdminCourseEdit from "./pages/Admin/AdminCourseEdit";
 import AdminAssignTeacher from "./pages/Admin/AdminAssignTeacher";
 import CourseMembers from "./pages/Admin/CourseMembers";
 import AdminCourseInstances from "./pages/Admin/AdminCourseInstances";
@@ -97,6 +98,10 @@ export default function App() {
             <Route path="/admin/users/:id/edit" element={<AdminUserEdit />} />
             <Route path="/admin/courses" element={<AdminCoursesList />} />
             <Route path="/admin/courses/:id" element={<AdminCourseDetail />} />
+            <Route
+              path="/admin/courses/:id/edit"
+              element={<AdminCourseEdit />}
+            />
             <Route path="/admin/courses/new" element={<NewCourse />} />
             <Route
               path="/admin/courses/instances"

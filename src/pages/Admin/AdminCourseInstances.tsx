@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminLoading from "../../components/common/AdminLoading";
 import AdminPagination from "../../components/common/AdminPagination";
 import { Modal } from "../../components/ui/modal";
@@ -9,6 +10,7 @@ import api from "../../utils/api";
 import type { User } from "../../interfaces/user";
 import type { PageResponse } from "../../interfaces/pagination";
 import type { ApiResponse } from "../../interfaces/api";
+import { Eye, Archive, ArchiveRestore } from "lucide-react";
 
 type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
 
@@ -207,7 +209,7 @@ const AdminCourseInstances = () => {
         title="Danh sách lớp học"
         description="Xem danh sách lớp học (CourseInstance) và giảng viên phụ trách"
       />
-
+      <PageBreadcrumb pageTitle="Danh sách lớp học" />
       <div className="space-y-4">
         {/* Filter bar */}
         <div className="rounded-2xl bg-white p-5 shadow-card border-2">
@@ -354,7 +356,7 @@ const AdminCourseInstances = () => {
                             to={`/admin/course-instances/${ci.id}`}
                             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
                           >
-                            Chi tiết
+                            <Eye />
                           </Link>
                           <button
                             type="button"
@@ -370,9 +372,11 @@ const AdminCourseInstances = () => {
                                 : "bg-red-600 hover:bg-red-700"
                             }`}
                           >
-                            {ci.status === "INACTIVE"
-                              ? "Kích hoạt lại"
-                              : "Lưu trữ"}
+                            {ci.status === "INACTIVE" ? (
+                              <ArchiveRestore />
+                            ) : (
+                              <Archive />
+                            )}
                           </button>
                         </div>
                       </td>

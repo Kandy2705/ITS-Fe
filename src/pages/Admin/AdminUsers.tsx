@@ -2,11 +2,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminPagination from "../../components/common/AdminPagination";
 import { Modal } from "../../components/ui/modal";
 import api from "../../utils/api";
 import type { PageResponse } from "../../interfaces/pagination";
 import type { User } from "../../interfaces/user";
+import { Eye, Pencil, Lock, LockOpen } from "lucide-react";
 
 const PAGE_SIZE = 5;
 
@@ -152,6 +154,7 @@ const AdminUsers = () => {
         title="Quản lý người dùng"
         description="Trang dành cho Admin kiểm soát tài khoản"
       />
+      <PageBreadcrumb pageTitle="Quản lý người dùng" />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl bg-white p-5 shadow-card border-2">
@@ -367,13 +370,13 @@ const AdminUsers = () => {
                             to={`/admin/users/${user.id}`}
                             className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
                           >
-                            Xem chi tiết
+                            <Eye />
                           </Link>
                           <Link
                             to={`/admin/users/${user.id}/edit`}
                             className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50"
                           >
-                            Chỉnh sửa
+                            <Pencil />
                           </Link>
                           <button
                             type="button"
@@ -381,9 +384,7 @@ const AdminUsers = () => {
                             disabled={loading || togglingUserId === user.id}
                             className="rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-70"
                           >
-                            {user.status === "ACTIVE"
-                              ? "Khoá/Tạm dừng"
-                              : "Kích hoạt"}
+                            {user.status === "ACTIVE" ? <Lock /> : <LockOpen />}
                           </button>
                         </div>
                       </td>

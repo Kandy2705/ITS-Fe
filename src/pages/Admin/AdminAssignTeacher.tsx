@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminLoading from "../../components/common/AdminLoading";
 import AdminPagination from "../../components/common/AdminPagination";
 import api from "../../utils/api";
@@ -267,16 +268,7 @@ const AdminAssignTeacher = () => {
         description="Chọn khóa học, chọn giáo viên và xác nhận để gán"
       />
       <div className="space-y-4 text-base">
-        {/* Breadcrumb */}
-        {/* <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex text-base text-gray-600">
-            <Link to="/admin" className="hover:text-brand-600">
-              Admin
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900">Gán giáo viên vào khóa học</span>
-          </nav>
-        </div> */}
+        <PageBreadcrumb pageTitle="Gán giáo viên vào khóa học" />
 
         {/* Success Message */}
         {success && (

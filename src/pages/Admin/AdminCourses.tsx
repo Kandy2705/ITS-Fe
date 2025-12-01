@@ -1,5 +1,6 @@
 import { useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import { useNavigate, Link } from "react-router-dom";
 
 // Types
@@ -139,6 +140,7 @@ const AdminCourses = () => {
         title="Quản lý khóa học"
         description="Admin quản lý toàn bộ khoá học trên hệ thống"
       />
+      <PageBreadcrumb pageTitle="Quản lý khóa học" />
       <div className="space-y-4 text-base">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 dark:border-gray-800 dark:bg-white/[0.03] p-5 shadow-card ">
@@ -313,7 +315,15 @@ const AdminCourses = () => {
                             }}
                             className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:border-brand-400 hover:bg-brand-50"
                           >
-                            Chỉnh sửa
+                            Chỉnh sửa nhanh
+                          </button>
+                          <button
+                            onClick={() =>
+                              navigate(`/admin/courses/${course.id}/edit`)
+                            }
+                            className="rounded-lg border border-brand-200 bg-brand-50 px-3 py-1.5 text-sm font-medium text-brand-700 transition hover:bg-brand-100"
+                          >
+                            Chỉnh sửa chi tiết
                           </button>
 
                           {course.isDraft ? (

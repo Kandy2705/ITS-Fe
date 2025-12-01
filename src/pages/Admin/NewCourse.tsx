@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import api from "../../utils/api";
 
 interface CourseFormData {
@@ -98,6 +99,7 @@ const NewCourse = () => {
         title="Tạo khoá học mới"
         description="Biểu mẫu thêm khoá học với đầy đủ thông tin và tuỳ chọn"
       />
+      <PageBreadcrumb pageTitle="Tạo khoá học mới" />
       <div className="space-y-6">
         <div className="flex flex-col justify-between gap-3 rounded-2xl bg-white p-6 shadow-card md:flex-row md:items-center border-2">
           <div>

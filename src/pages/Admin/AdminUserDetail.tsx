@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminLoading from "../../components/common/AdminLoading";
 import api from "../../utils/api";
 import type { User } from "../../interfaces/user";
@@ -207,19 +208,7 @@ const AdminUserDetail = () => {
         description="Xem thông tin chi tiết và trạng thái người dùng trong hệ thống"
       />
       <div className="space-y-4">
-        <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex text-sm text-gray-600">
-            <Link to="/admin" className="hover:text-brand-600">
-              Admin
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to="/admin/users" className="hover:text-brand-600">
-              Quản lý người dùng
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900">Chi tiết</span>
-          </nav>
-        </div>
+        <PageBreadcrumb pageTitle="Chi tiết người dùng" />
 
         {renderContent()}
       </div>

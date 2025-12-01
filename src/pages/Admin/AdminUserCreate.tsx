@@ -2,6 +2,7 @@ import { useState, FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import api from "../../utils/api";
 import type { UserRole, UserStatus } from "../../interfaces/user";
 
@@ -116,19 +117,7 @@ const AdminUserCreate = () => {
         description="Trang dành cho Admin tạo tài khoản người dùng mới"
       />
       <div className="space-y-4">
-        <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex flex-wrap items-center gap-1 text-sm text-gray-600">
-            <Link to="/admin" className="hover:text-brand-600">
-              Admin
-            </Link>
-            <span className="mx-1">/</span>
-            <Link to="/admin/users" className="hover:text-brand-600">
-              Quản lý người dùng
-            </Link>
-            <span className="mx-1">/</span>
-            <span className="text-gray-900">Tạo mới</span>
-          </nav>
-        </div>
+        <PageBreadcrumb pageTitle="Tạo người dùng mới" />
 
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import AdminLoading from "../../components/common/AdminLoading";
 import AdminPagination from "../../components/common/AdminPagination";
 import api from "../../utils/api";
@@ -207,17 +208,7 @@ const AdminEnrollStudents = () => {
         title="Gán sinh viên vào lớp"
         description="Chọn lớp học và sinh viên để gán"
       />
-
-      {/* Breadcrumb */}
-      <div className="mb-4 rounded-2xl bg-white p-4 shadow-card">
-        <nav className="flex text-base text-gray-600">
-          <Link to="/admin" className="hover:text-brand-600">
-            Admin
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-gray-900">Gán sinh viên vào lớp</span>
-        </nav>
-      </div>
+      <PageBreadcrumb pageTitle="Gán sinh viên vào lớp" />
 
       <div className="space-y-6 text-base">
         {/* Step 1: chọn lớp học */}

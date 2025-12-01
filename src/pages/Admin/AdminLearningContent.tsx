@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 
 interface CoursePermission {
   id: string;
@@ -51,36 +52,75 @@ const initialCourses: CoursePermission[] = [
 ];
 
 const initialLearners: LearnerAccess[] = [
-  { id: "st-001", name: "Ngô Thùy Dương", course: "Lập trình Web nâng cao", status: "active" },
-  { id: "st-014", name: "Huỳnh Tấn Sang", course: "Phân tích dữ liệu", status: "pending" },
-  { id: "st-023", name: "Hoàng Ngọc Linh", course: "Nhập môn AI", status: "active" },
-  { id: "st-045", name: "Trần Khôi", course: "Lập trình Web nâng cao", status: "pending" },
+  {
+    id: "st-001",
+    name: "Ngô Thùy Dương",
+    course: "Lập trình Web nâng cao",
+    status: "active",
+  },
+  {
+    id: "st-014",
+    name: "Huỳnh Tấn Sang",
+    course: "Phân tích dữ liệu",
+    status: "pending",
+  },
+  {
+    id: "st-023",
+    name: "Hoàng Ngọc Linh",
+    course: "Nhập môn AI",
+    status: "active",
+  },
+  {
+    id: "st-045",
+    name: "Trần Khôi",
+    course: "Lập trình Web nâng cao",
+    status: "pending",
+  },
 ];
 
 const AdminLearningContent = () => {
   const [courses, setCourses] = useState<CoursePermission[]>(initialCourses);
   const [learners, setLearners] = useState<LearnerAccess[]>(initialLearners);
-  const [selectedCourse, setSelectedCourse] = useState<string>(initialCourses[0].id);
+  const [selectedCourse, setSelectedCourse] = useState<string>(
+    initialCourses[0].id
+  );
   const [newViewerEmail, setNewViewerEmail] = useState("");
 
   const summary = useMemo(() => {
     const totalViewers = courses.reduce((sum, c) => sum + c.viewers, 0);
-    const pendingViewers = courses.reduce((sum, c) => sum + c.pendingViewers, 0);
-    const pendingInstructorRequests = courses.filter((c) => c.requestedInstructor).length;
+    const pendingViewers = courses.reduce(
+      (sum, c) => sum + c.pendingViewers,
+      0
+    );
+    const pendingInstructorRequests = courses.filter(
+      (c) => c.requestedInstructor
+    ).length;
 
     return { totalViewers, pendingViewers, pendingInstructorRequests };
   }, [courses]);
 
   const handleInstructorChange = (courseId: string, instructor: string) => {
-    setCourses((prev) => prev.map((c) => (c.id === courseId ? { ...c, instructor, requestedInstructor: undefined } : c)));
+    setCourses((prev) =>
+      prev.map((c) =>
+        c.id === courseId
+          ? { ...c, instructor, requestedInstructor: undefined }
+          : c
+      )
+    );
   };
 
   const handleApproveViewer = (learnerId: string) => {
-    setLearners((prev) => prev.map((l) => (l.id === learnerId ? { ...l, status: "active" } : l)));
+    setLearners((prev) =>
+      prev.map((l) => (l.id === learnerId ? { ...l, status: "active" } : l))
+    );
     setCourses((prev) =>
       prev.map((course) =>
         course.name === learners.find((l) => l.id === learnerId)?.course
-          ? { ...course, viewers: course.viewers + 1, pendingViewers: Math.max(0, course.pendingViewers - 1) }
+          ? {
+              ...course,
+              viewers: course.viewers + 1,
+              pendingViewers: Math.max(0, course.pendingViewers - 1),
+            }
           : course
       )
     );
@@ -104,40 +144,70 @@ const AdminLearningContent = () => {
     ]);
 
     setCourses((prev) =>
-      prev.map((c) => (c.id === selectedCourse ? { ...c, pendingViewers: c.pendingViewers + 1 } : c))
+      prev.map((c) =>
+        c.id === selectedCourse
+          ? { ...c, pendingViewers: c.pendingViewers + 1 }
+          : c
+      )
     );
     setNewViewerEmail("");
   };
 
   return (
     <>
-      <PageMeta title="Phân quyền nội dung học tập" description="Quản trị quyền giảng dạy và quyền truy cập học liệu" />
+      <PageMeta
+        title="Phân quyền nội dung học tập"
+        description="Quản trị quyền giảng dạy và quyền truy cập học liệu"
+      />
+      <PageBreadcrumb pageTitle="Phân quyền nội dung học tập" />
       <div className="space-y-6">
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-card dark:border-gray-800 dark:bg-white/5">
-            <p className="text-xs font-semibold uppercase text-gray-500">Tổng lượt xem hợp lệ</p>
-            <p className="mt-2 text-3xl font-bold text-brand-700">{summary.totalViewers.toLocaleString("vi-VN")}</p>
+            <p className="text-xs font-semibold uppercase text-gray-500">
+              Tổng lượt xem hợp lệ
+            </p>
+            <p className="mt-2 text-3xl font-bold text-brand-700">
+              {summary.totalViewers.toLocaleString("vi-VN")}
+            </p>
             <p className="text-sm text-gray-600">Đã được cấp quyền xem</p>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-card dark:border-gray-800 dark:bg-white/5">
-            <p className="text-xs font-semibold uppercase text-gray-500">Yêu cầu chờ duyệt</p>
-            <p className="mt-2 text-3xl font-bold text-orange-600">{summary.pendingViewers}</p>
-            <p className="text-sm text-gray-600">Cần xét duyệt quyền truy cập</p>
+            <p className="text-xs font-semibold uppercase text-gray-500">
+              Yêu cầu chờ duyệt
+            </p>
+            <p className="mt-2 text-3xl font-bold text-orange-600">
+              {summary.pendingViewers}
+            </p>
+            <p className="text-sm text-gray-600">
+              Cần xét duyệt quyền truy cập
+            </p>
           </div>
           <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-card dark:border-gray-800 dark:bg-white/5">
-            <p className="text-xs font-semibold uppercase text-gray-500">Đề xuất giảng viên mới</p>
-            <p className="mt-2 text-3xl font-bold text-gray-900">{summary.pendingInstructorRequests}</p>
-            <p className="text-sm text-gray-600">Các khóa học yêu cầu thay giảng viên</p>
+            <p className="text-xs font-semibold uppercase text-gray-500">
+              Đề xuất giảng viên mới
+            </p>
+            <p className="mt-2 text-3xl font-bold text-gray-900">
+              {summary.pendingInstructorRequests}
+            </p>
+            <p className="text-sm text-gray-600">
+              Các khóa học yêu cầu thay giảng viên
+            </p>
           </div>
         </div>
 
         <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card dark:border-gray-800 dark:bg-white/5">
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">Phân quyền giảng viên</h2>
-              <p className="text-sm text-gray-600">Chỉ định giảng viên chịu trách nhiệm cho từng khóa học.</p>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Phân quyền giảng viên
+              </h2>
+              <p className="text-sm text-gray-600">
+                Chỉ định giảng viên chịu trách nhiệm cho từng khóa học.
+              </p>
             </div>
-            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Quyền giảng dạy</span>
+            <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+              Quyền giảng dạy
+            </span>
           </div>
 
           <div className="mt-4 overflow-x-auto">
@@ -154,7 +224,9 @@ const AdminLearningContent = () => {
                 {courses.map((course) => (
                   <tr key={course.id} className="align-top">
                     <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{course.name}</p>
+                      <p className="font-semibold text-gray-900">
+                        {course.name}
+                      </p>
                       <p className="text-xs text-gray-500">Mã: {course.id}</p>
                     </td>
                     <td className="px-4 py-3">
@@ -163,8 +235,12 @@ const AdminLearningContent = () => {
                           {course.instructor.slice(0, 2)}
                         </div>
                         <div>
-                          <p className="font-medium text-gray-900">{course.instructor}</p>
-                          <p className="text-xs text-gray-500">Quyền giảng dạy</p>
+                          <p className="font-medium text-gray-900">
+                            {course.instructor}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Quyền giảng dạy
+                          </p>
                         </div>
                       </div>
                     </td>
@@ -174,7 +250,9 @@ const AdminLearningContent = () => {
                           {course.requestedInstructor}
                         </div>
                       ) : (
-                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">Không có</span>
+                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                          Không có
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -182,7 +260,9 @@ const AdminLearningContent = () => {
                         <select
                           className="rounded-lg border border-gray-300 px-3 py-2 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
                           value={course.instructor}
-                          onChange={(e) => handleInstructorChange(course.id, e.target.value)}
+                          onChange={(e) =>
+                            handleInstructorChange(course.id, e.target.value)
+                          }
                         >
                           {instructorPool.map((ins) => (
                             <option key={ins} value={ins}>
@@ -206,18 +286,29 @@ const AdminLearningContent = () => {
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card dark:border-gray-800 dark:bg-white/5 lg:col-span-2">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Chỉ định danh sách học viên</h3>
-                <p className="text-sm text-gray-600">Cấp quyền xem học liệu cho học viên cụ thể.</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Chỉ định danh sách học viên
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Cấp quyền xem học liệu cho học viên cụ thể.
+                </p>
               </div>
-              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">Danh sách</span>
+              <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">
+                Danh sách
+              </span>
             </div>
 
             <div className="mt-4 space-y-3">
               {learners.map((learner) => (
-                <div key={learner.id} className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3">
+                <div
+                  key={learner.id}
+                  className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3"
+                >
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold text-gray-900">{learner.name}</p>
+                      <p className="font-semibold text-gray-900">
+                        {learner.name}
+                      </p>
                       <p className="text-xs text-gray-500">{learner.course}</p>
                     </div>
                     <span
@@ -227,7 +318,9 @@ const AdminLearningContent = () => {
                           : "bg-orange-100 text-orange-700"
                       }`}
                     >
-                      {learner.status === "active" ? "Đã cấp quyền" : "Chờ duyệt"}
+                      {learner.status === "active"
+                        ? "Đã cấp quyền"
+                        : "Chờ duyệt"}
                     </span>
                   </div>
                   {learner.status === "pending" && (
@@ -246,16 +339,24 @@ const AdminLearningContent = () => {
           <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card dark:border-gray-800 dark:bg-white/5 lg:col-span-3">
             <div className="flex items-start justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Cấp quyền xem nhanh</h3>
-                <p className="text-sm text-gray-600">Thêm học viên mới vào khóa học đang chọn.</p>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Cấp quyền xem nhanh
+                </h3>
+                <p className="text-sm text-gray-600">
+                  Thêm học viên mới vào khóa học đang chọn.
+                </p>
               </div>
-              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">Tạo mới</span>
+              <span className="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">
+                Tạo mới
+              </span>
             </div>
 
             <form className="mt-4 space-y-3" onSubmit={handleAddViewer}>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="space-y-1">
-                  <label className="text-sm font-semibold text-gray-700">Khóa học</label>
+                  <label className="text-sm font-semibold text-gray-700">
+                    Khóa học
+                  </label>
                   <select
                     value={selectedCourse}
                     onChange={(e) => setSelectedCourse(e.target.value)}
@@ -269,7 +370,9 @@ const AdminLearningContent = () => {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-sm font-semibold text-gray-700">Email học viên</label>
+                  <label className="text-sm font-semibold text-gray-700">
+                    Email học viên
+                  </label>
                   <input
                     type="email"
                     value={newViewerEmail}
@@ -286,15 +389,21 @@ const AdminLearningContent = () => {
                 >
                   Thêm vào danh sách chờ
                 </button>
-                <p className="text-sm text-gray-500">Admin có thể duyệt ngay trong bảng bên cạnh.</p>
+                <p className="text-sm text-gray-500">
+                  Admin có thể duyệt ngay trong bảng bên cạnh.
+                </p>
               </div>
             </form>
 
             <div className="mt-6 rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-600">
               <p className="font-semibold text-gray-900">Lưu ý</p>
               <ul className="list-disc pl-5">
-                <li>Chỉ định giảng viên trước khi mở quyền xem cho học viên.</li>
-                <li>Quyền xem được đồng bộ với tài liệu và bài tập của khóa học.</li>
+                <li>
+                  Chỉ định giảng viên trước khi mở quyền xem cho học viên.
+                </li>
+                <li>
+                  Quyền xem được đồng bộ với tài liệu và bài tập của khóa học.
+                </li>
               </ul>
             </div>
           </div>

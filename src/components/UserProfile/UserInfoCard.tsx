@@ -1,68 +1,199 @@
+import { FormEvent, useEffect, useState } from "react";
+import axios from "axios";
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
 import Input from "../form/input/InputField";
 import Label from "../form/Label";
+import api from "../../utils/api";
+import { useAppDispatch, useAppSelecteor } from "../../hooks/useRedux";
+import { updateUserInfo } from "../../features/auth/authSlice";
+import type { User } from "../../interfaces/user";
+
+const statusColors: Record<string, string> = {
+  ACTIVE: "bg-green-50 text-green-700",
+  INACTIVE: "bg-orange-50 text-orange-700",
+};
+
+// Khớp với UserResponse DTO (id, firstName, lastName, email, role, status)
+interface UserProfileInfo {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: User["role"];
+  status: User["status"];
+}
+
+// Dữ liệu user lưu trong Redux có thể thiếu một số field -> dùng bản "partial" của UserProfileInfo
+type AuthUserInfoShape = Partial<UserProfileInfo>;
 
 export default function UserInfoCard() {
   const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
-    closeModal();
+  const dispatch = useAppDispatch();
+
+  const { userInfo } = useAppSelecteor((state) => state.auth) as {
+    userInfo: AuthUserInfoShape | null;
   };
+
+  const [user, setUser] = useState<UserProfileInfo | null>(null);
+  const [formData, setFormData] = useState<UserProfileInfo | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!userInfo) {
+      setUser(null);
+      setFormData(null);
+      return;
+    }
+
+    const mapped: UserProfileInfo = {
+      id: userInfo.id ?? "",
+      firstName: userInfo.firstName ?? "",
+      lastName: userInfo.lastName ?? "",
+      email: userInfo.email ?? "",
+      role: userInfo.role ?? "STUDENT",
+      status: userInfo.status ?? "ACTIVE",
+    };
+
+    setUser(mapped);
+    setFormData(mapped);
+  }, [userInfo]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!formData) return;
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+
+  const handleSave = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!formData) return;
+
+    setSaving(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const payload = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+      };
+
+      const res = await api.patch("/users/me", payload);
+      if (res.data?.success) {
+        const updated = res.data.data as UserProfileInfo;
+
+        const mapped: UserProfileInfo = {
+          id: updated.id,
+          firstName: updated.firstName ?? payload.firstName,
+          lastName: updated.lastName ?? payload.lastName,
+          email: updated.email ?? payload.email,
+          role: updated.role,
+          status: updated.status,
+        };
+
+        setUser(mapped);
+        setFormData(mapped);
+        // Cập nhật lại Redux và localStorage (chỉ các field đang lưu trong auth.userInfo)
+        dispatch(
+          updateUserInfo({
+            firstName: mapped.firstName,
+            lastName: mapped.lastName,
+            email: mapped.email,
+          })
+        );
+        setSuccessMessage("Cập nhật thông tin cá nhân thành công.");
+        closeModal();
+      } else {
+        setError(
+          res.data?.message || "Không thể cập nhật thông tin cá nhân của bạn."
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi cập nhật thông tin cá nhân.";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
       <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <h4 className="text-lg font-semibold text-gray-800 dark:text-white/90 lg:mb-6">
-            Personal Information
+            Thông Tin Cá Nhân
           </h4>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:gap-7 2xl:gap-x-32">
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                First Name
+                Họ
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Musharof
+                {user?.lastName || "Chưa có thông tin"}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Last Name
+                Tên
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Chowdhury
+                {user?.firstName || "Chưa có thông tin"}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Email address
+                Địa chỉ email
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                randomuser@pimjo.com
+                {user?.email || "Chưa có thông tin"}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Phone
+                Vai trò
               </p>
               <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                +09 363 398 46
+                {user?.role || "Chưa có thông tin"}
               </p>
             </div>
 
             <div>
               <p className="mb-2 text-xs leading-normal text-gray-500 dark:text-gray-400">
-                Bio
+                Trạng thái
               </p>
-              <p className="text-sm font-medium text-gray-800 dark:text-white/90">
-                Team Manager
-              </p>
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ${
+                  user?.status
+                    ? statusColors[user.status] || "bg-gray-100 text-gray-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}
+              >
+                {user?.status === "ACTIVE"
+                  ? "Đang hoạt động"
+                  : user?.status || "Chưa có thông tin"}
+              </span>
             </div>
           </div>
         </div>
@@ -94,15 +225,25 @@ export default function UserInfoCard() {
         <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
           <div className="px-2 pr-14">
             <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
+              Chỉnh sửa thông tin cá nhân
             </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              Update your details to keep your profile up-to-date.
+            <p className="mb-3 text-sm text-gray-500 dark:text-gray-400 lg:mb-4">
+              Cập nhật thông tin cá nhân mới nhất
             </p>
+            {error && (
+              <p className="mb-3 text-sm text-red-600 dark:text-red-400">
+                {error}
+              </p>
+            )}
+            {successMessage && (
+              <p className="mb-3 text-sm text-green-600 dark:text-green-400">
+                {successMessage}
+              </p>
+            )}
           </div>
-          <form className="flex flex-col">
+          <form className="flex flex-col" onSubmit={handleSave}>
             <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div>
+              {/* <div>
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
                   Social Links
                 </h5>
@@ -134,46 +275,56 @@ export default function UserInfoCard() {
                     <Input type="text" value="https://instagram.com/PimjoHQ" />
                   </div>
                 </div>
-              </div>
+              </div> */}
               <div className="mt-7">
                 <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
+                  Thông tin cá nhân
                 </h5>
 
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
+                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-1">
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>First Name</Label>
-                    <Input type="text" value="Musharof" />
+                    <div className="col-span-2 lg:col-span-1">
+                      <Label>Họ</Label>
+                      <Input
+                        type="text"
+                        name="lastName"
+                        value={formData?.lastName ?? ""}
+                        onChange={handleChange}
+                      />
+                    </div>
+
+                    <Label>Tên</Label>
+                    <Input
+                      type="text"
+                      name="firstName"
+                      value={formData?.firstName ?? ""}
+                      onChange={handleChange}
+                    />
                   </div>
 
                   <div className="col-span-2 lg:col-span-1">
-                    <Label>Last Name</Label>
-                    <Input type="text" value="Chowdhury" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Email Address</Label>
-                    <Input type="text" value="randomuser@pimjo.com" />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Phone</Label>
-                    <Input type="text" value="+09 363 398 46" />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label>Bio</Label>
-                    <Input type="text" value="Team Manager" />
+                    <Label>Địa chỉ email</Label>
+                    <Input
+                      type="email"
+                      name="email"
+                      value={formData?.email ?? ""}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={closeModal}
+                disabled={saving}
+              >
                 Close
               </Button>
-              <Button size="sm" onClick={handleSave}>
-                Save Changes
+              <Button size="sm" disabled={saving || !formData}>
+                {saving ? "Saving..." : "Save Changes"}
               </Button>
             </div>
           </form>

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import api from "../../utils/api";
 import type { User } from "../../interfaces/user";
 import type { ApiResponse } from "../../interfaces/api";
@@ -346,22 +347,8 @@ const AdminCourseDetail = () => {
         title={`Chi tiết khóa học - ${course.title}`}
         description="Xem thông tin chi tiết khóa học"
       />
+      <PageBreadcrumb pageTitle="Chi tiết khóa học" />
       <div className="space-y-4">
-        {/* Breadcrumb */}
-        <div className="rounded-2xl bg-white p-4 shadow-card">
-          <nav className="flex text-sm text-gray-600">
-            <Link to="/admin" className="hover:text-brand-600">
-              Admin
-            </Link>
-            <span className="mx-2">/</span>
-            <Link to="/admin/courses" className="hover:text-brand-600">
-              Danh sách khóa học
-            </Link>
-            <span className="mx-2">/</span>
-            <span className="text-gray-900">Chi tiết</span>
-          </nav>
-        </div>
-
         {/* Header */}
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -390,6 +377,12 @@ const AdminCourseDetail = () => {
                 className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
               >
                 Quay lại
+              </Link>
+              <Link
+                to={`/admin/courses/${course.id}/edit`}
+                className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-brand-100"
+              >
+                Chỉnh sửa
               </Link>
               <button
                 onClick={handleDeleteCourse}
