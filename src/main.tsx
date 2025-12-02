@@ -6,13 +6,21 @@ import "flatpickr/dist/flatpickr.css";
 import App from "./App.tsx";
 import { AppWrapper } from "./components/common/PageMeta.tsx";
 import { ThemeProvider } from "./context/ThemeContext.tsx";
+import { Provider } from "react-redux";
+import { store } from "./store.ts";
+import { setupInterceptors } from "./utils/setupInterceptors.ts";
+import api from "./utils/api.ts";
+
+setupInterceptors(api);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ThemeProvider>
-      <AppWrapper>
-        <App />
-      </AppWrapper>
-    </ThemeProvider>
-  </StrictMode>,
+    <Provider store={store}>
+      <ThemeProvider>
+        <AppWrapper>
+          <App />
+        </AppWrapper>
+      </ThemeProvider>
+    </Provider>
+  </StrictMode>
 );
