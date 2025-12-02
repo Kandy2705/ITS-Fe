@@ -19,7 +19,6 @@ import Home from "./pages/Dashboard/Home";
 import AuthPortal from "./pages/Lms/AuthPortal";
 import MyCourses from "./pages/Lms/MyCourses";
 import CourseDetail from "./pages/Lms/CourseDetail";
-import FileDetail from "./pages/Lms/FileDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminUserDetail from "./pages/Admin/AdminUserDetail";
 import AdminUserEdit from "./pages/Admin/AdminUserEdit";
@@ -38,14 +37,19 @@ import QuizBuilder from "./pages/Lms/QuizBuilder";
 import TeacherCourses from "./pages/Teacher/MyCourses";
 import TeacherCourseDetail from "./pages/Teacher/CourseDetail";
 import TeacherFileDetail from "./pages/Teacher/FileDetail";
+import TeacherUploadMaterial from "./pages/Teacher/TeacherUploadMaterial";
 import TeacherNewCourse from "./pages/Teacher/TeacherNewCourse";
 import TeacherLearningContent from "./pages/Teacher/TeacherLearningContent";
+import TeacherDocument from "./pages/Teacher/TeacherDocument";
+import TeacherEditMaterial from "./pages/Teacher/TeacherEditMaterial";
+import TeacherAssignments from "./pages/Teacher/TeacherAssignments";
 import StudentCourses from "./pages/Student/MyCourses";
 import StudentCourseDetail from "./pages/Student/CourseDetail";
 import StudentFileDetail from "./pages/Student/FileDetail";
 import StudentLearningContent from "./pages/Student/StudentLearningContent";
 import StudentSubmissionHistory from "./pages/Student/StudentSubmissionHistory";
 import AdminLearningContent from "./pages/Admin/AdminLearningContent";
+import FileDetail from "./pages/Teacher/FileDetail";
 
 export default function App() {
   return (
@@ -140,7 +144,23 @@ export default function App() {
               path="/teacher/content"
               element={<TeacherLearningContent />}
             />
-            <Route path="/teacher/content/upload" element={<FileDetail />} />
+            <Route
+              path="/teacher/content/upload"
+              element={<TeacherUploadMaterial />}
+            />
+            <Route path="/teacher/document" element={<TeacherDocument />} />
+            <Route
+              path="/teacher/assignments"
+              element={<TeacherAssignments />}
+            />
+            <Route
+              path="/teacher/courses/:courseId/materials/:materialId"
+              element={<FileDetail />}
+            />
+            <Route
+              path="/teacher/courses/:courseId/materials/:materialId/edit"
+              element={<TeacherEditMaterial />}
+            />
 
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />

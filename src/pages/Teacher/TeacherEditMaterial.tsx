@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import PageMeta from "../../components/common/PageMeta";
 
 type MaterialFormat = "document" | "slide" | "video" | "image" | "reading";
-
 type ContentType = "document" | "slide" | "video" | "image" | "reading";
 type ContentStatus = "active" | "inactive" | "hidden";
 
@@ -29,13 +28,13 @@ const contentStatusLabels: Record<ContentStatus, string> = {
   hidden: "Chưa mở (ẩn với sinh viên)",
 };
 
-const TeacherUploadMaterial = () => {
+const TeacherEditMaterial = () => {
   const navigate = useNavigate();
-  const { courseId } = useParams();
+  const { courseId, materialId } = useParams();
 
   const [material, setMaterial] = useState({
     title: "",
-    format: "pdf" as MaterialFormat,
+    format: "document" as MaterialFormat,
     description: "",
     file: null as File | null,
     link: "",
@@ -50,6 +49,57 @@ const TeacherUploadMaterial = () => {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!materialId) {
+      navigate(`/teacher/courses/${courseId || ""}`);
+      return;
+    }
+
+    // Simulate API call to fetch material data
+    const fetchMaterial = async () => {
+      setIsLoading(true);
+      try {
+        // Replace with actual API call
+        // const response = await fetch(`/api/materials/${materialId}`);
+        // const data = await response.json();
+
+        // Mock data for demo
+        const mockData = {
+          title: "Tài liệu mẫu",
+          format: "document" as MaterialFormat,
+          description: "Mô tả mẫu cho tài liệu",
+          type: "document" as ContentType,
+          status: "active" as ContentStatus,
+          allowAt: "",
+          dueDate: "",
+          allowedLate: false,
+        };
+
+        setMaterial((prev) => ({
+          ...prev,
+          title: mockData.title,
+          format: mockData.format,
+          description: mockData.description,
+        }));
+
+        setContentMeta({
+          type: mockData.type,
+          status: mockData.status,
+          allowAt: mockData.allowAt,
+          dueDate: mockData.dueDate,
+          allowedLate: mockData.allowedLate,
+        });
+      } catch (error) {
+        console.error("Error fetching material:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchMaterial();
+  }, [materialId, navigate, courseId]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -57,13 +107,22 @@ const TeacherUploadMaterial = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const mapFormatToContentType = (format: MaterialFormat): ContentType => {
+    if (format === "video") return "video";
+    if (format === "slide") return "slide";
+    if (format === "image") return "image";
+    if (format === "reading") return "reading";
+    return "document";
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!material.title.trim()) return;
+    if (!material.title.trim() || !courseId) return;
 
     setIsSubmitting(true);
 
     const payload = {
+      id: materialId,
       title: material.title.trim(),
       shortDescription: material.description.trim(),
       format: material.format,
@@ -75,33 +134,39 @@ const TeacherUploadMaterial = () => {
       allowAt: contentMeta.allowAt || null,
       dueDate: contentMeta.dueDate || null,
       allowedLate: contentMeta.allowedLate,
-      courseInstanceId: courseId ?? "ci-demo",
+      courseInstanceId: courseId,
     };
 
-    setTimeout(() => {
-      console.log("Material uploaded (payload):", payload);
+    try {
+      // Replace with actual API call
+      // await fetch(`/api/materials/${materialId}`, {
+      //   method: 'PUT',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify(payload)
+      // });
+
+      console.log("Material updated:", payload);
+      navigate(`/teacher/courses/${courseId}`);
+    } catch (error) {
+      console.error("Error updating material:", error);
+    } finally {
       setIsSubmitting(false);
-      if (courseId) {
-        navigate(`/teacher/courses/${courseId}`);
-      } else {
-        navigate("/teacher/courses");
-      }
-    }, 1200);
+    }
   };
 
-  const mapFormatToContentType = (format: MaterialFormat): ContentType => {
-    if (format === "video") return "video";
-    if (format === "slide") return "slide";
-    if (format === "image") return "image";
-    if (format === "reading") return "reading";
-    return "document";
-  };
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
       <PageMeta
-        title="Đăng tải tài liệu mới"
-        description="Tải lên tài liệu, video hoặc liên kết học tập mới"
+        title="Chỉnh sửa tài liệu"
+        description="Cập nhật thông tin học liệu"
       />
 
       <div className="mb-6">
@@ -124,13 +189,9 @@ const TeacherUploadMaterial = () => {
           </svg>
           Quay lại
         </button>
-        <h1 className="text-2xl font-bold text-gray-900">
-          Đăng tải học liệu mới
-        </h1>
+        <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa học liệu</h1>
         <p className="text-gray-600">
-          Chia sẻ tài liệu, video hoặc liên kết học tập với sinh viên. Các thiết
-          lập ở đây sẽ dùng cho mục <strong>Tài liệu học tập</strong> và{" "}
-          <strong>chi tiết tài liệu</strong>.
+          Cập nhật thông tin học liệu để sinh viên truy cập
         </p>
       </div>
 
@@ -246,7 +307,7 @@ const TeacherUploadMaterial = () => {
             ) : (
               <div>
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Tệp đính kèm <span className="text-red-500">*</span>
+                  Tệp đính kèm
                 </label>
                 <div className="mt-1 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
                   <div className="space-y-1 text-center">
@@ -278,15 +339,13 @@ const TeacherUploadMaterial = () => {
                           onChange={handleFileChange}
                           accept={
                             material.format === "document"
-                              ? ".pdf"
+                              ? ".pdf,.doc,.docx,.txt"
                               : material.format === "video"
                               ? "video/*"
                               : material.format === "slide"
                               ? ".ppt,.pptx,.odp"
                               : material.format === "image"
                               ? "image/*"
-                              : material.format === "reading"
-                              ? ""
                               : ""
                           }
                         />
@@ -434,7 +493,7 @@ const TeacherUploadMaterial = () => {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
                 />
                 <p className="mt-1 text-xs text-gray-500">
-                  Để trống nếu muốn mở ngay khi đăng tải.
+                  Để trống nếu muốn mở ngay khi cập nhật.
                 </p>
               </div>
 
@@ -496,9 +555,9 @@ const TeacherUploadMaterial = () => {
             <button
               type="submit"
               disabled={isSubmitting || !material.title.trim()}
-              className="rounded-lg border border-transparent px-6 py-2.5 text-sm font-medium text-white shadow-sm bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg border border-transparent bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {isSubmitting ? "Đang tải lên..." : "Đăng tải"}
+              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
             </button>
           </div>
         </form>
@@ -507,4 +566,4 @@ const TeacherUploadMaterial = () => {
   );
 };
 
-export default TeacherUploadMaterial;
+export default TeacherEditMaterial;

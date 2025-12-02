@@ -1,85 +1,184 @@
-import { useMemo } from "react";
-import { useParams, Link, useNavigate } from "react-router";
+import { useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
+import {
+  FiSearch,
+  FiCalendar,
+  FiChevronDown,
+  FiChevronUp,
+} from "react-icons/fi";
+import { Link } from "react-router-dom";
 
-const lessons = [
-  { 
-    title: "Giới thiệu khoá học", 
-    status: "done", 
-    duration: "15 phút",
-    completed: true,
-    score: 9.5,
-    feedback: "Tốt, bạn đã nắm vững kiến thức cơ bản"
+type MaterialType = "document" | "slide" | "video" | "image" | "reading";
+type MaterialStatus = "active" | "inactive" | "hidden";
+
+interface LearningMaterial {
+  id: string;
+  courseInstanceId: string;
+  title: string;
+  description: string;
+  type: MaterialType;
+  status: MaterialStatus;
+  orderIndex: number;
+  dueDate: string | null;
+  allowAt: string;
+  allowedLate: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const learningMaterials: LearningMaterial[] = [
+  {
+    id: "c1",
+    courseInstanceId: "ci-1",
+    title: "Giới thiệu khoá học",
+    description: "Tổng quan về mục tiêu, phạm vi và cách sử dụng hệ thống ITS.",
+    type: "document",
+    status: "active",
+    orderIndex: 1,
+    dueDate: null,
+    allowAt: "2025-12-01T00:00:00Z",
+    allowedLate: false,
+    createdAt: "2025-11-25T10:00:00Z",
+    updatedAt: "2025-11-25T10:00:00Z",
   },
-  { 
-    title: "Phân tích yêu cầu ITS", 
-    status: "in-progress", 
-    duration: "35 phút",
-    completed: false,
-    score: null,
-    feedback: "Đang thực hiện..."
+  {
+    id: "c2",
+    courseInstanceId: "ci-1",
+    title: "Tài liệu: Phân tích yêu cầu ITS",
+    description:
+      "Bài đọc về stakeholder, functional và non-functional requirements.",
+    type: "reading",
+    status: "active",
+    orderIndex: 2,
+    dueDate: "2025-12-10T23:59:59Z", // ví dụ: chỉ xem được tới ngày này
+    allowAt: "2025-12-01T00:00:00Z",
+    allowedLate: true,
+    createdAt: "2025-11-26T09:00:00Z",
+    updatedAt: "2025-11-26T09:00:00Z",
   },
-  { 
-    title: "Dự báo lộ trình tự động", 
-    status: "locked", 
-    duration: "50 phút",
-    completed: false,
-    score: null,
-    feedback: "Sẽ mở sau khi hoàn thành bài trước"
-  },
-  { 
-    title: "Thực hành: Cá nhân hoá quiz", 
-    status: "locked", 
-    duration: "60 phút",
-    completed: false,
-    score: null,
-    feedback: "Sẽ mở sau khi hoàn thành bài trước"
+  {
+    id: "c3",
+    courseInstanceId: "ci-1",
+    title: "Video: Dự báo lộ trình tự động",
+    description:
+      "Video giải thích thuật toán recommendation cho lộ trình học thích ứng.",
+    type: "video",
+    status: "hidden",
+    orderIndex: 3,
+    dueDate: null,
+    allowAt: "2025-12-15T00:00:00Z",
+    allowedLate: false,
+    createdAt: "2025-11-27T14:00:00Z",
+    updatedAt: "2025-11-27T14:00:00Z",
   },
 ];
 
-const assignments = [
-  { 
-    id: 1,
-    title: "Bài tập 1: Thiết kế module ITS", 
-    type: "Bài tập lập trình", 
-    due: "Còn 2 ngày",
-    status: "not-submitted",
-    score: null,
-    submitted: false
+const comments = [
+  {
+    name: "Bạn",
+    role: "Sinh viên",
+    avatar: "B",
+    time: "5 phút trước",
+    text: "Tài liệu rất hữu ích, nhưng phần 2.3 hơi khó hiểu.",
+    isMe: true,
   },
-  { 
-    id: 2,
-    title: "Quiz 1: Kiến thức nền", 
-    type: "Trắc nghiệm", 
-    due: "Còn 5 ngày",
-    status: "not-started",
-    score: null,
-    submitted: false
+  {
+    name: "Nguyễn Văn A",
+    role: "Sinh viên",
+    avatar: "A",
+    time: "2 giờ trước",
+    text: "Ai giải thích giúp mình phần 3.2 với ạ?",
+    isMe: false,
   },
-  { 
-    id: 3,
-    title: "Dự án nhỏ: Lộ trình thích ứng", 
-    type: "Dự án nhóm", 
-    due: "Còn 12 ngày",
-    status: "not-started",
-    score: null,
-    submitted: false
+  {
+    name: "Trần Thị B",
+    role: "Sinh viên",
+    avatar: "T",
+    time: "3 giờ trước",
+    text: "Tôi cũng đang thắc mắc phần đó. @Nguyễn Văn A chúng ta có thể thảo luận thêm không?",
+    isMe: false,
+  },
+  {
+    name: "ITS Bot",
+    role: "Hỗ trợ AI",
+    avatar: "AI",
+    time: "Hôm qua",
+    text: "Dựa trên tiến độ của bạn, tôi đề xuất xem kỹ phần 2.3 và làm bài tập liên quan để hiểu sâu hơn.",
+    isMe: false,
   },
 ];
+
+type SortOption = "newest" | "oldest";
 
 const StudentCourseDetail = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [newComment, setNewComment] = useState("");
+  const [isLiked, setIsLiked] = useState(false);
 
-  const title = useMemo(
-    () => id ? `Khoá học của tôi: ${id}` : "Khoá học của tôi - Demo",
-    [id]
-  );
+  const handleCommentSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newComment.trim()) {
+      // In a real app, you would add the comment to the state or send it to an API
+      console.log("New comment:", newComment);
+      setNewComment("");
+    }
+  };
 
-  const progress = 42; // Example progress percentage
-  const nextLesson = "Phân tích yêu cầu ITS";
-  const timeSpent = "8 giờ 45 phút";
-  const rank = "Top 30%";
+  const filteredAndSortedMaterials = useMemo(() => {
+    let result = [...learningMaterials];
+
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (material) =>
+          material.title.toLowerCase().includes(query) ||
+          material.description.toLowerCase().includes(query)
+      );
+    }
+
+    // Sort by date
+    result.sort((a, b) => {
+      const dateA = new Date(a.updatedAt);
+      const dateB = new Date(b.updatedAt);
+      return sortBy === "newest"
+        ? dateB.getTime() - dateA.getTime()
+        : dateA.getTime() - dateB.getTime();
+    });
+
+    return result;
+  }, [searchQuery, sortBy]);
+
+  const getStatusLabel = (status: MaterialStatus): string => {
+    const statusMap: Record<MaterialStatus, string> = {
+      active: "Đang mở",
+      inactive: "Đã đóng",
+      hidden: "Chưa mở",
+    };
+    return statusMap[status];
+  };
+
+  const getMaterialTypeLabel = (type: MaterialType): string => {
+    const typeMap: Record<MaterialType, string> = {
+      document: "Tài liệu (PDF/DOCX/TXT)",
+      slide: "Slide (PPTX)",
+      video: "Video bài giảng",
+      image: "Hình ảnh / infographic",
+      reading: "Bài đọc / chương",
+    };
+    return typeMap[type];
+  };
+
+  const getMaterialInfo = (material: LearningMaterial) => ({
+    typeLabel: getMaterialTypeLabel(material.type),
+    statusLabel: getStatusLabel(material.status),
+    isLocked: material.status === "hidden",
+  });
 
   return (
     <>
@@ -87,241 +186,333 @@ const StudentCourseDetail = () => {
         title="Khoá học của tôi"
         description="Theo dõi tiến độ học tập và nhiệm vụ của bạn"
       />
+
+      <div className="mb-4 flex items-center text-sm text-gray-600">
+        <Link to="/student/courses" className="hover:text-brand-600">
+          Khóa học của tôi
+        </Link>
+        <span className="mx-2">/</span>
+        <span className="text-gray-900">Nhập môn điện toán</span>
+      </div>
+
       <div className="space-y-4">
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-gray-500">Khoá học dành cho sinh viên</p>
-              <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
-              <p className="text-sm text-gray-600">
-                Chào mừng bạn quay trở lại! Bài học tiếp theo của bạn là: {nextLesson}
+              <div className="flex items-center gap-2">
+                <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                  CS101
+                </span>
+                <span className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                  3 tín chỉ
+                </span>
+              </div>
+              <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+                Nhập môn điện toán
+              </h1>
+              <p className="mt-1 text-sm text-gray-600">
+                Khóa học này giúp các bạn nắm vững kiến thức cơ bản về điện toán
+              </p>
+              <p className="mt-1 text-sm text-gray-600">
+                Giáo viên: TS. Nguyễn Văn A
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 md:w-80">
-              <div className="rounded-xl bg-brand-25 p-3 text-center">
-                <p className="text-xs font-semibold uppercase text-brand-700">Tiến độ</p>
-                <p className="text-2xl font-bold text-brand-700">{progress}%</p>
-                <p className="text-xs text-gray-600">Đang học tuần 3/6</p>
-              </div>
-              <div className="rounded-xl bg-blue-50 p-3 text-center">
-                <p className="text-xs font-semibold uppercase text-blue-700">Xếp hạng</p>
-                <p className="text-2xl font-bold text-blue-700">{rank}</p>
-                <p className="text-xs text-gray-600">Trong lớp học</p>
+            <div className="mt-4 flex items-center gap-3 md:mt-0">
+              <div className="rounded-lg bg-gray-50 p-3 text-center">
+                <p className="text-xs font-medium text-gray-500">Trạng thái</p>
+                <p className="text-sm font-semibold text-green-600">
+                  Đang hoạt động
+                </p>
               </div>
             </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 md:grid-cols-2">
-            <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Bài học tiếp theo</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">{nextLesson}</p>
-              <p className="text-sm text-gray-600">Bắt đầu ngay</p>
-            </div>
-            <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Thời gian học</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">{timeSpent}</p>
-              <p className="text-sm text-gray-600">Tổng thời gian học tập</p>
-            </div>
-            {/* <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Hỗ trợ</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">Cần giúp đỡ?</p>
-              <p className="text-sm text-gray-600">Đặt lịch hẹn với giảng viên</p>
-            </div> */}
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-4">
+        <div className="grid">
+          <div className="space-y-4">
             <div className="rounded-2xl bg-white p-5 shadow-card">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Tiến độ học tập</h3>
-                <button className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700">
-                  Xem lộ trình chi tiết
-                </button>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Tài liệu học tập
+                </h3>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                  <div className="relative">
+                    <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                      <FiSearch className="h-4 w-4 text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      className="block w-full rounded-md border border-gray-300 bg-white py-2 pl-10 pr-3 text-sm text-gray-900 placeholder-gray-500 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                      placeholder="Tìm kiếm tài liệu..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                    />
+                  </div>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      className="inline-flex w-full items-center justify-between rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                      onClick={() => setIsSortOpen(!isSortOpen)}
+                    >
+                      <FiCalendar className="mr-2 h-4 w-4 text-gray-400" />
+                      {sortBy === "newest" ? "Mới nhất" : "Cũ nhất"}
+                      {isSortOpen ? (
+                        <FiChevronUp className="ml-2 h-4 w-4" />
+                      ) : (
+                        <FiChevronDown className="ml-2 h-4 w-4" />
+                      )}
+                    </button>
+                    {isSortOpen && (
+                      <div className="absolute right-0 z-10 mt-1 w-40 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5">
+                        <div className="py-1">
+                          <button
+                            onClick={() => {
+                              setSortBy("newest");
+                              setIsSortOpen(false);
+                            }}
+                            className={`block w-full px-4 py-2 text-left text-sm ${
+                              sortBy === "newest"
+                                ? "bg-gray-100 text-gray-900"
+                                : "text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            Mới nhất
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSortBy("oldest");
+                              setIsSortOpen(false);
+                            }}
+                            className={`block w-full px-4 py-2 text-left text-sm ${
+                              sortBy === "oldest"
+                                ? "bg-gray-100 text-gray-900"
+                                : "text-gray-700 hover:bg-gray-100"
+                            }`}
+                          >
+                            Cũ nhất
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
               <div className="mt-4 space-y-4">
-                {lessons.map((lesson, index) => (
-                  <div 
-                    key={index}
-                    className={`group flex items-start gap-3 rounded-lg border p-3 transition-colors ${
-                      lesson.status === 'in-progress' 
-                        ? 'border-brand-300 bg-brand-50 hover:border-brand-400' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => {
-                      if (lesson.status !== 'locked') {
-                        navigate(`/student/courses/${id}/files/${lesson.title.toLowerCase().replace(/\s+/g, '-')}`);
-                      }
-                    }}
-                    style={{ cursor: lesson.status === 'locked' ? 'not-allowed' : 'pointer' }}
-                  >
-                    <span
-                      className={`mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
-                        lesson.completed
-                          ? 'bg-green-500'
-                          : lesson.status === 'in-progress'
-                          ? 'bg-orange-500'
-                          : 'bg-gray-300'
-                      }`}
-                    >
-                      {lesson.completed ? '✓' : index + 1}
-                    </span>
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">{lesson.title}</p>
-                          <p className="text-sm text-gray-600">{lesson.duration} • {lesson.status === 'in-progress' ? 'Đang học' : lesson.completed ? 'Đã hoàn thành' : 'Chưa mở'}</p>
-                        </div>
-                        {lesson.completed && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-3 py-0.5 text-sm font-medium text-green-800">
-                            {lesson.score}/10
-                          </span>
-                        )}
-                      </div>
-                      {lesson.completed && (
-                        <div className="mt-2 rounded-lg bg-gray-50 p-2 text-sm text-gray-700">
-                          <p className="font-medium">Nhận xét:</p>
-                          <p>"{lesson.feedback}"</p>
-                        </div>
-                      )}
-                      <div className="mt-2 flex gap-2">
-                        <button
-                          className={`rounded-lg px-3 py-1 text-sm font-medium ${
-                            lesson.status === 'in-progress'
-                              ? 'bg-brand-600 text-white hover:bg-brand-700'
-                              : lesson.completed
-                              ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                              : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          }`}
-                          disabled={lesson.status === 'locked'}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (lesson.status !== 'locked') {
-                              navigate(`/student/courses/${id}/files/${lesson.title.toLowerCase().replace(/\s+/g, '-')}`);
-                            }
-                          }}
-                        >
-                          {lesson.completed ? 'Xem lại' : lesson.status === 'in-progress' ? 'Tiếp tục' : 'Bắt đầu'}
-                        </button>
-                        {/* {lesson.completed && (
-                          <button className="rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50">
-                            Tải chứng chỉ
-                          </button>
-                        )} */}
-                      </div>
-                    </div>
+                {filteredAndSortedMaterials.length === 0 ? (
+                  <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <FiSearch className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Không tìm thấy tài liệu
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Thử thay đổi từ khoá tìm kiếm hoặc bộ lọc
+                    </p>
                   </div>
-                ))}
-              </div>
-            </div>
+                ) : (
+                  filteredAndSortedMaterials.map((material) => {
+                    const { typeLabel, statusLabel, isLocked } =
+                      getMaterialInfo(material);
 
-            <div className="rounded-2xl bg-white p-5 shadow-card">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Nhiệm vụ & Bài tập</h3>
-                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
-                  Hạn chót sắp tới
-                </span>
-              </div>
-              <div className="mt-4 space-y-3">
-                {assignments.map((assignment) => (
-                  <div 
-                    key={assignment.id}
-                    className="rounded-xl border border-gray-200 p-4 hover:border-brand-300 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <p className="text-xs font-semibold uppercase text-gray-500">{assignment.type}</p>
-                        <p className="mt-1 text-base font-semibold text-gray-900">{assignment.title}</p>
-                        <p className="text-sm text-gray-600">Hạn chót: {assignment.due}</p>
-                        {assignment.status === 'submitted' ? (
-                          <p className="mt-2 text-sm text-green-600">Đã nộp • Chờ chấm điểm</p>
-                        ) : assignment.status === 'graded' ? (
-                          <p className="mt-2 text-sm text-gray-700">Điểm: <span className="font-semibold">{assignment.score}/10</span></p>
-                        ) : (
-                          <p className="mt-2 text-sm text-orange-600">Chưa nộp</p>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <button 
-                          className={`rounded-lg px-3 py-1 text-sm font-medium ${
-                            assignment.submitted
-                              ? 'border border-gray-300 text-gray-700 hover:bg-gray-50'
-                              : 'bg-brand-600 text-white hover:bg-brand-700'
+                    return (
+                      <div
+                        key={material.id}
+                        className={`group flex items-start gap-3 rounded-lg border p-3 transition-colors ${
+                          material.status === "active"
+                            ? "border-brand-300 bg-brand-50 hover:border-brand-400"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                        onClick={() => {
+                          if (!isLocked) {
+                            navigate(
+                              `/student/courses/${id}/files/${material.id}`
+                            );
+                          }
+                        }}
+                        style={{ cursor: isLocked ? "not-allowed" : "pointer" }}
+                      >
+                        <span
+                          className={`mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
+                            material.status === "active"
+                              ? "bg-brand-600"
+                              : "bg-gray-300"
                           }`}
                         >
-                          {assignment.submitted ? 'Đã nộp' : 'Nộp bài'}
-                        </button>
-                        <button 
-                          className="rounded-lg border border-gray-200 bg-white px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/student/courses/${id}/assignments/${assignment.id}`);
-                          }}
-                        >
-                          Chi tiết
-                        </button>
+                          {material.orderIndex}
+                        </span>
+
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <p className="font-semibold text-gray-900">
+                                {material.title}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {typeLabel}
+                                {" • "}
+                                {statusLabel}
+                              </p>
+                            </div>
+                          </div>
+                          {material.dueDate && (
+                            <p className="mt-1 text-xs text-gray-500">
+                              Hạn xem:{" "}
+                              {new Date(material.dueDate).toLocaleString(
+                                "vi-VN"
+                              )}
+                              {material.allowedLate ? " • Cho phép trễ" : ""}
+                            </p>
+                          )}
+
+                          <div className="mt-2 flex gap-2">
+                            <button
+                              className={`rounded-lg px-3 py-1 text-sm font-medium ${
+                                isLocked
+                                  ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                                  : "bg-brand-600 text-white hover:bg-brand-700"
+                              }`}
+                              disabled={isLocked}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (!isLocked) {
+                                  navigate(
+                                    `/student/courses/${id}/files/${material.id}`
+                                  );
+                                }
+                              }}
+                            >
+                              {isLocked ? "Chưa mở" : "Xem tài liệu"}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })
+                )}
               </div>
             </div>
           </div>
+        </div>
 
-          <div className="space-y-4">
-            {/* <div className="rounded-2xl bg-white p-5 shadow-card">
-              <h3 className="text-lg font-semibold text-gray-900">Thông báo gần đây</h3>
-              <ul className="mt-3 space-y-3 text-sm text-gray-700">
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                  <div>
-                    <p>Bài tập 1 sắp đến hạn nộp trong 2 ngày nữa.</p>
-                    <button className="mt-1 text-xs font-semibold text-brand-600">Xem chi tiết</button>
-                  </div>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                  <div>
-                    <p>Bài kiểm tra giữa kỳ sẽ diễn ra vào tuần tới.</p>
-                    <button className="mt-1 text-xs font-semibold text-brand-600">Ôn tập ngay</button>
-                  </div>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
-                  <div>
-                    <p>Giảng viên đã đăng tài liệu mới cho bài học tuần 3.</p>
-                    <button className="mt-1 text-xs font-semibold text-brand-600">Tải xuống</button>
-                  </div>
-                </li>
-              </ul>
-            </div> */}
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Diễn đàn</h3>
+          </div>
 
-            <div className="rounded-2xl bg-white p-5 shadow-card">
-              <h3 className="text-lg font-semibold text-gray-900">Tài nguyên học tập</h3>
-              <div className="mt-3 space-y-2 text-sm">
-                <Link 
-                  to={`/student/courses/${id}/materials`}
-                  className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left text-sm font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50"
-                >
-                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                  Tài liệu khóa học
-                </Link>
-                <button className="flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50">
-                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Hướng dẫn học tập
-                </button>
-                <button className="flex w-full items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-left font-semibold text-gray-900 transition hover:border-brand-400 hover:bg-brand-50">
-                  <svg className="h-5 w-5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Tài liệu tham khảo
-                </button>
+          <form onSubmit={handleCommentSubmit} className="mt-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
+                B
+              </div>
+              <div className="flex-1">
+                <textarea
+                  rows={3}
+                  className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
+                  placeholder="Đặt câu hỏi hoặc bình luận về tài liệu này..."
+                  value={newComment}
+                  onChange={(e) => setNewComment(e.target.value)}
+                />
+                <div className="mt-2 flex items-center justify-between">
+                  <div className="flex gap-2"></div>
+                  <button
+                    type="submit"
+                    className="rounded-lg bg-brand-600 px-12 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
+                    disabled={!newComment.trim()}
+                  >
+                    Đăng
+                  </button>
+                </div>
               </div>
             </div>
+          </form>
+
+          <div className="mt-6 space-y-4">
+            {comments.map((comment, index) => (
+              <div
+                key={index}
+                className={`rounded-xl border p-4 ${
+                  comment.isMe
+                    ? "border-brand-200 bg-brand-50"
+                    : "border-gray-200"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <div
+                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ${
+                      comment.isMe
+                        ? "bg-brand-100 text-brand-700"
+                        : "bg-gray-100 text-gray-700"
+                    }`}
+                  >
+                    {comment.avatar}
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-semibold text-gray-900">
+                          {comment.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {comment.role} • {comment.time}
+                        </p>
+                      </div>
+                      {comment.isMe && (
+                        <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800">
+                          Bạn
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-2 text-gray-700">{comment.text}</p>
+                    <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
+                      <button
+                        className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-gray-100"
+                        onClick={() => setIsLiked(!isLiked)}
+                      >
+                        <svg
+                          className={`h-4 w-4 ${
+                            isLiked ? "text-brand-600 fill-current" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d={
+                              isLiked
+                                ? "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                                : "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
+                            }
+                          />
+                        </svg>
+                        <span>{isLiked ? "Đã thích" : "Thích"}</span>
+                      </button>
+                      <button className="rounded-full px-2 py-1 hover:bg-gray-100">
+                        Trả lời
+                      </button>
+                      {!comment.isMe && (
+                        <button className="ml-auto rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500">
+                          <svg
+                            className="h-5 w-5"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={1.5}
+                              d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+                            />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>
