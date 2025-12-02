@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import SignIn from "./pages/AuthPages/SignIn";
-import SignUp from "./pages/AuthPages/SignUp";
 import NotFound from "./pages/OtherPage/NotFound";
 import UserProfiles from "./pages/UserProfiles";
 import Videos from "./pages/UiElements/Videos";
@@ -11,7 +10,6 @@ import Avatars from "./pages/UiElements/Avatars";
 import Buttons from "./pages/UiElements/Buttons";
 import LineChart from "./pages/Charts/LineChart";
 import BarChart from "./pages/Charts/BarChart";
-// import Calendar from "./pages/Calendar";
 import BasicTables from "./pages/Tables/BasicTables";
 import FormElements from "./pages/Forms/FormElements";
 import Blank from "./pages/Blank";
@@ -22,10 +20,17 @@ import AuthPortal from "./pages/Lms/AuthPortal";
 import MyCourses from "./pages/Lms/MyCourses";
 import CourseDetail from "./pages/Lms/CourseDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
-import AdminCourses from "./pages/Admin/AdminCourses";
-import AdminNewCourse from "./pages/Admin/AdminNewCourse";
+import AdminUserDetail from "./pages/Admin/AdminUserDetail";
+import AdminUserEdit from "./pages/Admin/AdminUserEdit";
+import AdminUserCreate from "./pages/Admin/AdminUserCreate";
+import AdminCoursesList from "./pages/Admin/AdminCoursesList";
+import AdminCourseDetail from "./pages/Admin/AdminCourseDetail";
+import AdminCourseEdit from "./pages/Admin/AdminCourseEdit";
+import AdminAssignTeacher from "./pages/Admin/AdminAssignTeacher";
 import CourseMembers from "./pages/Admin/CourseMembers";
-import NewCourse from "./pages/Lms/NewCourse";
+import AdminCourseInstances from "./pages/Admin/AdminCourseInstances";
+import AdminEnrollStudents from "./pages/Admin/AdminEnrollStudents";
+import NewCourse from "./pages/Admin/NewCourse";
 import ProgramBuilder from "./pages/Lms/ProgramBuilder";
 import ExerciseCreator from "./pages/Lms/ExerciseCreator";
 import QuizBuilder from "./pages/Lms/QuizBuilder";
@@ -82,17 +87,45 @@ export default function App() {
             {/* LMS Pages */}
             <Route path="/lms/auth" element={<AuthPortal />} />
             <Route path="/lms/courses" element={<MyCourses />} />
-            <Route path="/lms/courses/new" element={<NewCourse />} />
+
             <Route path="/lms/courses/:id" element={<CourseDetail />} />
+            <Route
+              path="/lms/courses/:id/files/:fileId"
+              element={<FileDetail />}
+            />
             <Route path="/lms/programs/new" element={<ProgramBuilder />} />
             <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
             <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
-            <Route path="/admin/courses" element={<AdminCourses />} />
-            <Route path="/admin/courses/new" element={<AdminNewCourse />} />
+            <Route path="/admin/users/new" element={<AdminUserCreate />} />
+            <Route path="/admin/users/:id" element={<AdminUserDetail />} />
+            <Route path="/admin/users/:id/edit" element={<AdminUserEdit />} />
+            <Route path="/admin/courses" element={<AdminCoursesList />} />
+            <Route path="/admin/courses/:id" element={<AdminCourseDetail />} />
             <Route
-              path="/admin/courses/:courseId/members"
+              path="/admin/courses/:id/edit"
+              element={<AdminCourseEdit />}
+            />
+            <Route path="/admin/courses/new" element={<NewCourse />} />
+            <Route
+              path="/admin/courses/instances"
+              element={<AdminCourseInstances />}
+            />
+            <Route
+              path="/admin/courses/:courseId/instances"
+              element={<AdminCourseInstances />}
+            />
+            <Route
+              path="/admin/course-instances/enroll"
+              element={<AdminEnrollStudents />}
+            />
+            <Route
+              path="/admin/course-instances/:id"
               element={<CourseMembers />}
+            />
+            <Route
+              path="/admin/assign-teacher"
+              element={<AdminAssignTeacher />}
             />
             <Route path="/admin/content" element={<AdminLearningContent />} />
 
@@ -151,7 +184,7 @@ export default function App() {
 
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
-          <Route path="/signup" element={<SignUp />} />
+          {/* <Route path="/signup" element={<SignUp />} /> */}
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

@@ -1,30 +1,118 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router";
 import PageMeta from "../../components/common/PageMeta";
+import api from "../../utils/api";
+import axios from "axios";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { User } from "../../interfaces/user";
+
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string | null;
+}
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
+}
 
 const lessons = [
   { title: "Giới thiệu khoá học", status: "done", duration: "15 phút" },
-  { title: "Phân tích yêu cầu ITS", status: "in-progress", duration: "35 phút" },
+  {
+    title: "Phân tích yêu cầu ITS",
+    status: "in-progress",
+    duration: "35 phút",
+  },
   { title: "Dự báo lộ trình tự động", status: "locked", duration: "50 phút" },
-  { title: "Thực hành: Cá nhân hoá quiz", status: "locked", duration: "60 phút" },
+  {
+    title: "Thực hành: Cá nhân hoá quiz",
+    status: "locked",
+    duration: "60 phút",
+  },
 ];
 
 const tasks = [
-  { title: "Bài tập 1: Thiết kế module ITS", type: "Bài tập lập trình", due: "Còn 2 ngày" },
+  {
+    title: "Bài tập 1: Thiết kế module ITS",
+    type: "Bài tập lập trình",
+    due: "Còn 2 ngày",
+  },
   { title: "Quiz 1: Kiến thức nền", type: "Trắc nghiệm", due: "Còn 5 ngày" },
-  { title: "Dự án nhỏ: Lộ trình thích ứng", type: "Dự án nhóm", due: "Còn 12 ngày" },
+  {
+    title: "Dự án nhỏ: Lộ trình thích ứng",
+    type: "Dự án nhóm",
+    due: "Còn 12 ngày",
+  },
 ];
 
 const CourseDetail = () => {
   const { id } = useParams();
 
+  const [instances, setInstances] = useState<CourseInstance[]>([]);
+  const [loadingInstances, setLoadingInstances] = useState(false);
+  const [instancesError, setInstancesError] = useState<string | null>(null);
+
   const title = useMemo(
-    () =>
-      id
-        ? `Chi tiết khoá học: ${id}`
-        : "Chi tiết khoá học - Demo",
+    () => (id ? `Chi tiết khoá học: ${id}` : "Chi tiết khoá học - Demo"),
     [id]
   );
+
+  useEffect(() => {
+    const loadInstances = async () => {
+      if (!id) return;
+
+      setLoadingInstances(true);
+      setInstancesError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<CourseInstance>>>(
+          "/learning-management/courses-instance/getDetailsList",
+          {
+            params: {
+              page: 0,
+              size: 50,
+            },
+          }
+        );
+
+        if (!res.data.success) {
+          setInstancesError(
+            res.data.message ||
+              "Không thể tải danh sách lớp học (courseInstance) cho khoá này"
+          );
+          return;
+        }
+
+        const allInstances = res.data.data?.content || [];
+        const filtered = allInstances.filter((ci) => ci.course?.id === id);
+        setInstances(filtered);
+      } catch (err: unknown) {
+        let message =
+          "Đã xảy ra lỗi khi tải danh sách lớp học (courseInstance)";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            message = data.message || err.message || message;
+          } else {
+            message = err.message || message;
+          }
+        } else if (err instanceof Error) {
+          message = err.message;
+        }
+        setInstancesError(message);
+      } finally {
+        setLoadingInstances(false);
+      }
+    };
+
+    void loadInstances();
+  }, [id]);
 
   return (
     <>
@@ -36,20 +124,27 @@ const CourseDetail = () => {
         <div className="rounded-2xl bg-white p-6 shadow-card">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="text-sm text-gray-500">Khoá học dành cho sinh viên & giảng viên</p>
+              <p className="text-sm text-gray-500">
+                Khoá học dành cho sinh viên & giảng viên
+              </p>
               <h1 className="text-2xl font-semibold text-gray-900">{title}</h1>
               <p className="text-sm text-gray-600">
-                ITS đang dự đoán lộ trình dựa trên mức độ hoàn thành và đề xuất nội dung bổ sung.
+                ITS đang dự đoán lộ trình dựa trên mức độ hoàn thành và đề xuất
+                nội dung bổ sung.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 md:w-80">
               <div className="rounded-xl bg-brand-25 p-3 text-center">
-                <p className="text-xs font-semibold uppercase text-brand-700">Tiến độ</p>
+                <p className="text-xs font-semibold uppercase text-brand-700">
+                  Tiến độ
+                </p>
                 <p className="text-2xl font-bold text-brand-700">72%</p>
                 <p className="text-xs text-gray-600">Đang học tuần 3/6</p>
               </div>
               <div className="rounded-xl bg-orange-50 p-3 text-center">
-                <p className="text-xs font-semibold uppercase text-orange-700">Độ khó</p>
+                <p className="text-xs font-semibold uppercase text-orange-700">
+                  Độ khó
+                </p>
                 <p className="text-2xl font-bold text-orange-700">Vừa</p>
                 <p className="text-xs text-gray-600">Có thể điều chỉnh</p>
               </div>
@@ -58,29 +153,119 @@ const CourseDetail = () => {
 
           <div className="mt-5 grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Lịch học</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">Thứ 3,5,7 | 19:00 - 21:00</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                Lịch học
+              </p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                Thứ 3,5,7 | 19:00 - 21:00
+              </p>
               <p className="text-sm text-gray-600">Zoom + tài liệu tự học</p>
             </div>
             <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Phản hồi ITS</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">Độ khó đang phù hợp</p>
-              <p className="text-sm text-gray-600">Bạn có thể giảm/ tăng nếu thấy không sát.</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                Phản hồi ITS
+              </p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                Độ khó đang phù hợp
+              </p>
+              <p className="text-sm text-gray-600">
+                Bạn có thể giảm/ tăng nếu thấy không sát.
+              </p>
             </div>
             <div className="rounded-xl border border-gray-200 p-4">
-              <p className="text-xs font-semibold uppercase text-gray-500">Báo cáo nhanh</p>
-              <p className="mt-1 text-lg font-semibold text-gray-900">Gửi email 08:00 mỗi thứ 2</p>
-              <p className="text-sm text-gray-600">Bao gồm tiến độ, thời gian học, điểm số.</p>
+              <p className="text-xs font-semibold uppercase text-gray-500">
+                Báo cáo nhanh
+              </p>
+              <p className="mt-1 text-lg font-semibold text-gray-900">
+                Gửi email 08:00 mỗi thứ 2
+              </p>
+              <p className="text-sm text-gray-600">
+                Bao gồm tiến độ, thời gian học, điểm số.
+              </p>
             </div>
           </div>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
+            {/* Danh sách lớp học (CourseInstance) và giảng viên */}
             <div className="rounded-2xl bg-white p-5 shadow-card">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Danh sách bài học</h3>
-                <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white">Điều chỉnh lộ trình</button>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Lớp học &amp; giảng viên của khoá
+                </h3>
+                {id && (
+                  <span className="text-xs text-gray-500">
+                    ID khoá: <span className="font-mono">{id}</span>
+                  </span>
+                )}
+              </div>
+
+              {loadingInstances && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="h-6 w-6 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+                    <p className="text-xs font-medium text-gray-700">
+                      Đang tải danh sách lớp học...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {instancesError && !loadingInstances && (
+                <div className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {instancesError}
+                </div>
+              )}
+
+              {!loadingInstances && !instancesError && (
+                <div className="mt-4 space-y-2">
+                  {instances.length === 0 && (
+                    <p className="text-sm text-gray-500">
+                      Chưa có lớp học (courseInstance) nào cho khoá này.
+                    </p>
+                  )}
+
+                  {instances.map((ci) => (
+                    <div
+                      key={ci.id}
+                      className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-xs font-mono text-gray-500">
+                          ID lớp: {ci.id}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {ci.course.title}
+                          {ci.course.code && (
+                            <span className="ml-1 text-xs text-gray-500">
+                              (Mã: {ci.course.code})
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="text-right text-sm text-gray-800">
+                        <p className="font-semibold">
+                          {ci.teacher.firstName} {ci.teacher.lastName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {ci.teacher.email}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-white p-5 shadow-card">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Danh sách bài học
+                </h3>
+                <button className="rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white">
+                  Điều chỉnh lộ trình
+                </button>
               </div>
               <div className="mt-4 space-y-3">
                 {lessons.map((lesson) => (
@@ -93,22 +278,28 @@ const CourseDetail = () => {
                         lesson.status === "done"
                           ? "bg-brand-600"
                           : lesson.status === "in-progress"
-                            ? "bg-orange-500"
-                            : "bg-gray-300"
+                          ? "bg-orange-500"
+                          : "bg-gray-300"
                       }`}
                     >
                       {lesson.status === "done"
                         ? "✓"
                         : lesson.status === "in-progress"
-                          ? "…"
-                          : ""}
+                        ? "…"
+                        : ""}
                     </span>
                     <div className="flex flex-1 items-center justify-between">
                       <div>
-                        <p className="font-semibold text-gray-900">{lesson.title}</p>
-                        <p className="text-sm text-gray-600">{lesson.duration}</p>
+                        <p className="font-semibold text-gray-900">
+                          {lesson.title}
+                        </p>
+                        <p className="text-sm text-gray-600">
+                          {lesson.duration}
+                        </p>
                       </div>
-                      <button className="text-sm font-semibold text-brand-600">Xem</button>
+                      <button className="text-sm font-semibold text-brand-600">
+                        Xem
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -117,20 +308,33 @@ const CourseDetail = () => {
 
             <div className="rounded-2xl bg-white p-5 shadow-card">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">Nhiệm vụ & Bài tập</h3>
-                <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">Sinh viên</div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Nhiệm vụ & Bài tập
+                </h3>
+                <div className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                  Sinh viên
+                </div>
               </div>
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 {tasks.map((task) => (
-                  <div key={task.title} className="rounded-xl border border-gray-200 p-3">
-                    <p className="text-xs font-semibold uppercase text-gray-500">{task.type}</p>
-                    <p className="mt-1 text-base font-semibold text-gray-900">{task.title}</p>
+                  <div
+                    key={task.title}
+                    className="rounded-xl border border-gray-200 p-3"
+                  >
+                    <p className="text-xs font-semibold uppercase text-gray-500">
+                      {task.type}
+                    </p>
+                    <p className="mt-1 text-base font-semibold text-gray-900">
+                      {task.title}
+                    </p>
                     <p className="text-sm text-gray-600">{task.due}</p>
                     <div className="mt-3 flex gap-2 text-xs font-semibold">
                       <button className="flex-1 rounded-lg border border-gray-200 px-2 py-1 text-gray-800 transition hover:border-brand-400 hover:bg-brand-50">
                         Xem chi tiết
                       </button>
-                      <button className="rounded-lg bg-brand-600 px-2 py-1 text-white">Điều chỉnh</button>
+                      <button className="rounded-lg bg-brand-600 px-2 py-1 text-white">
+                        Điều chỉnh
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -140,7 +344,9 @@ const CourseDetail = () => {
 
           <div className="space-y-4">
             <div className="rounded-2xl bg-white p-5 shadow-card">
-              <h3 className="text-lg font-semibold text-gray-900">Hoạt động gần đây</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Hoạt động gần đây
+              </h3>
               <ul className="mt-3 space-y-3 text-sm text-gray-700">
                 <li className="flex items-start gap-2">
                   <span className="mt-1 h-2 w-2 rounded-full bg-brand-500" />
