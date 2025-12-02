@@ -347,7 +347,7 @@ const AdminUsers = () => {
                       className="border-b border-gray-100 hover:bg-gray-50"
                     >
                       <td className="px-3 py-2 font-semibold text-gray-900">
-                        {user.firstName + " " + user.lastName}
+                        {user.lastName + " " + user.firstName}
                       </td>
                       <td className="px-3 py-2">{user.role}</td>
                       <td className="px-3 py-2">

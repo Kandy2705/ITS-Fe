@@ -1,6 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import { FiSearch, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import axios from "axios";
+import api from "../../utils/api";
+import AdminLoading from "../../components/common/AdminLoading";
+import AdminPagination from "../../components/common/AdminPagination";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { User } from "../../interfaces/user";
+
+const PAGE_SIZE = 6; // 6 courses per page for grid layout
 
 type SortOption =
   | "progress-asc"
@@ -10,42 +19,152 @@ type SortOption =
   | "title-asc"
   | "title-desc";
 
-const studentCourses = [
-  {
-    id: "intro-ai",
-    courseCode: "CS101",
-    title: "Nhập môn Trí tuệ nhân tạo",
-    instructor: "TS. Nguyễn Huy",
-    progress: 68,
-    credits: 3,
-  },
-  {
-    id: "web-react",
-    courseCode: "WEB201",
-    title: "Xây dựng SPA với React",
-    instructor: "Cô Lê Mỹ An",
-    progress: 42,
-    credits: 4,
-  },
-  {
-    id: "data-science",
-    courseCode: "DS301",
-    title: "Khoa học dữ liệu cơ bản",
-    instructor: "TS. Trần Văn Bình",
-    progress: 35,
-    credits: 3,
-  },
-];
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string | null;
+  description: string | null;
+  credit: string | null;
+  status: string;
+}
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
+}
+
+interface CourseDisplay {
+  id: string;
+  courseCode: string;
+  title: string;
+  instructor: string;
+  progress: number;
+  credits: number;
+}
 
 const StudentCourses = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("title-asc");
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [courses, setCourses] = useState<CourseDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [studentId, setStudentId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageData, setPageData] = useState<PageResponse<CourseInstance> | null>(
+    null
+  );
 
+  // Fetch current user info to get student ID
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await api.get<ApiResponse<User>>("/users/me");
+      if (res.data.success && res.data.data) {
+        setStudentId(res.data.data.id);
+      } else {
+        setError("Không thể lấy thông tin người dùng");
+        setLoading(false);
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi lấy thông tin người dùng";
+      if (axios.isAxiosError(err)) {
+        errorMessage =
+          err.response?.data?.message || err.message || errorMessage;
+      }
+      setError(errorMessage);
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch course instances for the student
+  const fetchCourseInstances = useCallback(
+    async (page: number = 0) => {
+      if (!studentId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<CourseInstance>>>(
+          "/learning-management/courses-instance/getDetailsList",
+          {
+            params: {
+              studentId: studentId,
+              page: page,
+              size: PAGE_SIZE,
+            },
+          }
+        );
+
+        if (res.data.success && res.data.data) {
+          const pageResponse = res.data.data;
+          const instances = pageResponse.content || [];
+
+          // Map API response to display format
+          const mappedCourses: CourseDisplay[] = instances.map((instance) => ({
+            id: instance.id,
+            courseCode: instance.course.code || "N/A",
+            title: instance.course.title,
+            instructor: `${instance.teacher.firstName} ${instance.teacher.lastName}`,
+            progress: 0, // TODO: Calculate actual progress from student data
+            credits: parseInt(instance.course.credit || "0", 10) || 0,
+          }));
+
+          setCourses(mappedCourses);
+          setPageData(pageResponse);
+          setCurrentPage(page);
+        } else {
+          setError(res.data.message || "Không thể tải danh sách khóa học");
+        }
+      } catch (err: unknown) {
+        let errorMessage = "Đã xảy ra lỗi khi tải danh sách khóa học";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            errorMessage = data.message || err.message || errorMessage;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [studentId]
+  );
+
+  // Fetch current user on mount
+  useEffect(() => {
+    void fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
+  // Fetch course instances when studentId is available
+  useEffect(() => {
+    if (studentId) {
+      void fetchCourseInstances(0);
+    }
+  }, [studentId, fetchCourseInstances]);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    if (studentId) {
+      void fetchCourseInstances(page);
+    }
+  };
+
+  // Note: Filtering and sorting is now done on the client side for the current page
+  // If you want server-side filtering/sorting, you'll need to pass these as API params
   const filteredAndSortedCourses = useMemo(() => {
-    let result = [...studentCourses];
+    let result = [...courses];
 
-    // Filter by search query
+    // Filter by search query (client-side for current page)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -56,7 +175,7 @@ const StudentCourses = () => {
       );
     }
 
-    // Sort courses
+    // Sort courses (client-side for current page)
     result.sort((a, b) => {
       switch (sortBy) {
         case "progress-asc":
@@ -77,7 +196,7 @@ const StudentCourses = () => {
     });
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, courses]);
 
   const getSortLabel = (): string => {
     const sortLabels: Record<SortOption, string> = {
@@ -90,6 +209,26 @@ const StudentCourses = () => {
     };
     return sortLabels[sortBy];
   };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <AdminLoading
+          message="Đang tải danh sách khóa học..."
+          minHeight={200}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <h2 className="text-lg font-semibold text-red-600">Có lỗi xảy ra</h2>
+        <p className="mt-2 text-sm text-gray-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -223,6 +362,27 @@ const StudentCourses = () => {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {pageData && pageData.totalPages > 1 && (
+          <div className="mt-6">
+            <AdminPagination
+              page={currentPage}
+              totalPages={pageData.totalPages}
+              onPageChange={handlePageChange}
+              disabled={loading}
+            />
+          </div>
+        )}
+
+        {/* Pagination Info */}
+        {pageData && (
+          <div className="mt-4 text-center text-sm text-gray-600">
+            Hiển thị {pageData.numberOfElements} trong tổng số{" "}
+            {pageData.totalElements} khóa học (Trang {pageData.number + 1} /{" "}
+            {pageData.totalPages})
+          </div>
+        )}
       </div>
     </>
   );

@@ -552,7 +552,7 @@ const AdminCourseDetail = () => {
                         />
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-900">
-                        {teacher.firstName} {teacher.lastName}
+                        {teacher.lastName} {teacher.firstName}
                       </td>
                       <td className="px-4 py-2 text-sm text-gray-700">
                         {teacher.email}
@@ -617,9 +617,6 @@ const AdminCourseDetail = () => {
                     className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-3 transition hover:border-brand-200 hover:bg-brand-50"
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-sm font-mono text-gray-500">
-                        ID lớp: {ci.id}
-                      </span>
                       <span className="text-base font-semibold text-gray-900">
                         {ci.course.title}
                         {ci.course.code && (
@@ -631,7 +628,7 @@ const AdminCourseDetail = () => {
                     </div>
                     <div className="text-right text-base text-gray-800">
                       <p className="font-semibold">
-                        {ci.teacher.firstName} {ci.teacher.lastName}
+                        {ci.teacher.lastName} {ci.teacher.firstName}
                       </p>
                       <p className="text-sm text-gray-500">
                         {ci.teacher.email}

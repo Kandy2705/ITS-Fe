@@ -1,14 +1,16 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
 import { Link } from "react-router-dom";
+import axios from "axios";
+import api from "../../utils/api";
+import AdminLoading from "../../components/common/AdminLoading";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { User as UserType } from "../../interfaces/user";
 import {
-  FiSearch,
-  FiChevronDown,
-  FiChevronUp,
   FiUsers,
   FiFileText,
   FiPlus,
-  FiFilter,
   FiEdit2,
   FiEye,
   FiTrash2,
@@ -19,16 +21,38 @@ import {
 type UserRole = "student" | "teacher" | "admin";
 type UserStatus = "active" | "inactive" | "banned";
 
-// User interface
+// User interface for display
 interface User {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
-  password: string;
+  password?: string;
   role: UserRole;
   status: UserStatus;
-  listCourseInstance: string[]; // Array of CourseInstance IDs
+  listCourseInstance?: string[]; // Array of CourseInstance IDs
+}
+
+// Course instance interfaces
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string | null;
+  description?: string | null;
+  credit?: string | null;
+}
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  status: CourseInstanceStatus;
 }
 
 type MaterialType = "document" | "slide" | "video" | "image" | "reading";
@@ -54,49 +78,6 @@ interface LearningMaterial {
 }
 
 // Sample data: CHỈ tài liệu học tập, không assignment/quiz
-// Sample student data
-const students: User[] = [
-  {
-    id: "s1",
-    firstName: "Nguyễn Văn",
-    lastName: "A",
-    email: "nva@example.com",
-    password: "hashedpassword",
-    role: "student",
-    status: "active",
-    listCourseInstance: ["ci-1"],
-  },
-  {
-    id: "s2",
-    firstName: "Trần Thị",
-    lastName: "B",
-    email: "ttb@example.com",
-    password: "hashedpassword",
-    role: "student",
-    status: "active",
-    listCourseInstance: ["ci-1"],
-  },
-  {
-    id: "s3",
-    firstName: "Lê Văn",
-    lastName: "C",
-    email: "lvc@example.com",
-    password: "hashedpassword",
-    role: "student",
-    status: "active",
-    listCourseInstance: ["ci-1"],
-  },
-  {
-    id: "s4",
-    firstName: "Phạm Thị",
-    lastName: "D",
-    email: "ptd@example.com",
-    password: "hashedpassword",
-    role: "student",
-    status: "inactive",
-    listCourseInstance: ["ci-1"],
-  },
-];
 
 const learningMaterials: LearningMaterial[] = [
   {
@@ -222,6 +203,24 @@ const TeacherCourseDetail = () => {
   const [isLiked, setIsLiked] = useState<boolean>(false);
   const [materialToDelete, setMaterialToDelete] = useState<string | null>(null);
 
+  // Course instance state
+  const [courseInstance, setCourseInstance] = useState<CourseInstance | null>(
+    null
+  );
+  const [courseInstanceLoading, setCourseInstanceLoading] = useState(false);
+  const [courseInstanceError, setCourseInstanceError] = useState<string | null>(
+    null
+  );
+
+  // Students state
+  const [students, setStudents] = useState<User[]>([]);
+  const [studentsLoading, setStudentsLoading] = useState(false);
+  const [studentsError, setStudentsError] = useState<string | null>(null);
+  const [studentsPage, setStudentsPage] = useState(0);
+  const [studentsTotalPages, setStudentsTotalPages] = useState(0);
+  const [totalStudents, setTotalStudents] = useState(0);
+  const pageSize = 10;
+
   // Filter + sort
   const filteredAndSortedMaterials = useMemo(() => {
     let result = [...learningMaterials];
@@ -279,6 +278,164 @@ const TeacherCourseDetail = () => {
     console.log(`Deleting material with id: ${id}`);
     setMaterialToDelete(null);
   };
+
+  // Fetch course instance details from API
+  const fetchCourseInstance = useCallback(async () => {
+    if (!id) return;
+
+    setCourseInstanceLoading(true);
+    setCourseInstanceError(null);
+
+    try {
+      const res = await api.get<ApiResponse<CourseInstance>>(
+        "/learning-management/courses-instance/getDetails",
+        {
+          params: {
+            courseInstanceId: id,
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        setCourseInstance(res.data.data);
+      } else {
+        setCourseInstanceError(
+          res.data.message || "Không thể tải thông tin khóa học"
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải thông tin khóa học";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setCourseInstanceError(errorMessage);
+    } finally {
+      setCourseInstanceLoading(false);
+    }
+  }, [id]);
+
+  // Fetch total students count (for header display)
+  const fetchTotalStudents = useCallback(async () => {
+    if (!id) return;
+
+    try {
+      const res = await api.get<ApiResponse<PageResponse<UserType>>>(
+        "/learning-management/courses-instance/getAllStudentDetails",
+        {
+          params: {
+            courseInstanceId: id,
+            page: 0,
+            size: 1, // Chỉ cần 1 item để lấy totalElements
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        setTotalStudents(res.data.data.totalElements || 0);
+      }
+    } catch (err: unknown) {
+      // Không hiển thị lỗi nếu chỉ fetch tổng số, chỉ log
+      console.error("Error fetching total students:", err);
+    }
+  }, [id]);
+
+  // Fetch students from API
+  const fetchStudents = useCallback(async () => {
+    if (!id) return;
+
+    setStudentsLoading(true);
+    setStudentsError(null);
+
+    try {
+      const res = await api.get<ApiResponse<PageResponse<UserType>>>(
+        "/learning-management/courses-instance/getAllStudentDetails",
+        {
+          params: {
+            courseInstanceId: id,
+            page: studentsPage,
+            size: pageSize,
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        const apiStudents = res.data.data.content || [];
+
+        // Map API response to display format
+        // Backend uses uppercase: STUDENT, TEACHER, ADMIN, ACTIVE, INACTIVE
+        // Frontend uses lowercase for display
+        const mappedStudents: User[] = apiStudents.map((student) => ({
+          id: student.id,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          role:
+            student.role === "STUDENT"
+              ? "student"
+              : student.role === "TEACHER"
+              ? "teacher"
+              : "admin",
+          status:
+            student.status === "ACTIVE"
+              ? "active"
+              : student.status === "INACTIVE"
+              ? "inactive"
+              : "banned",
+        }));
+
+        setStudents(mappedStudents);
+        setStudentsTotalPages(res.data.data.totalPages || 0);
+        setTotalStudents(res.data.data.totalElements || 0);
+      } else {
+        setStudentsError(
+          res.data.message || "Không thể tải danh sách học viên"
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải danh sách học viên";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setStudentsError(errorMessage);
+    } finally {
+      setStudentsLoading(false);
+    }
+  }, [id, studentsPage, pageSize]);
+
+  // Fetch course instance details when component mounts
+  useEffect(() => {
+    if (id) {
+      void fetchCourseInstance();
+    }
+  }, [id, fetchCourseInstance]);
+
+  // Fetch total students count when component mounts (for header display)
+  useEffect(() => {
+    if (id) {
+      void fetchTotalStudents();
+    }
+  }, [id, fetchTotalStudents]);
+
+  // Fetch students when tab changes to students or when page changes
+  useEffect(() => {
+    if (activeTab === "students" && id) {
+      void fetchStudents();
+    }
+  }, [activeTab, id, fetchStudents]);
 
   const renderMaterialItem = (material: LearningMaterial) => {
     return (
@@ -355,8 +512,9 @@ const TeacherCourseDetail = () => {
     );
   };
 
-  const courseTitle = id ? `Khoá học #${id}` : "Khoá học mẫu";
-  const totalStudents = 25;
+  const courseTitle = courseInstance?.course?.title || "Đang tải...";
+  const courseCode = courseInstance?.course?.code;
+  const courseId = id || "";
   const totalMaterials = learningMaterials.length;
 
   return (
@@ -369,46 +527,70 @@ const TeacherCourseDetail = () => {
         <span className="text-gray-900">{courseTitle}</span>
       </div>
       <div className="bg-white shadow">
-        <div className="rounded-2xl bg-white p-6 shadow-card">
-          <div className="md:flex md:items-center md:justify-between">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                  CS101
-                </span>
-                <span className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                  3 tín chỉ
-                </span>
-              </div>
-
-              <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-                {courseTitle}
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Khóa học này giúp các bạn nắm vững kiến thức cơ bản về điện toán
-              </p>
-              <div className="mt-2 flex flex-wrap gap-4">
-                <span className="inline-flex items-center text-sm text-gray-600">
-                  <FiUsers className="mr-1.5 h-4 w-4 text-gray-500" />
-                  {totalStudents} học viên
-                </span>
-                <span className="inline-flex items-center text-sm text-gray-600">
-                  <FiFileText className="mr-1.5 h-4 w-4 text-gray-500" />
-                  {totalMaterials} tài liệu
-                </span>
-              </div>
-            </div>
-            <div className="mt-4 flex-shrink-0 flex md:mt-0 md:ml-4">
-              <button
-                type="button"
-                className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                onClick={() => navigate("/teacher/content/upload")}
-              >
-                <FiPlus className="-ml-1 mr-2 h-5 w-5" />
-                Thêm tài liệu
-              </button>
-            </div>
+        {courseInstanceError && (
+          <div className="mx-4 mt-4 rounded-md bg-red-50 p-4">
+            <p className="text-sm text-red-800">{courseInstanceError}</p>
           </div>
+        )}
+        <div className="rounded-2xl bg-white p-6 shadow-card">
+          {courseInstanceLoading ? (
+            <AdminLoading message="Đang tải thông tin khóa học..." />
+          ) : (
+            <div className="md:flex md:items-center md:justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  {courseCode && (
+                    <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                      {courseCode}
+                    </span>
+                  )}
+                  {courseInstance?.course?.credit && (
+                    <span className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                      {courseInstance.course.credit} tín chỉ
+                    </span>
+                  )}
+                </div>
+
+                <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+                  {courseTitle}
+                </h1>
+                {courseId && (
+                  <p className="mt-1 text-sm text-gray-500">
+                    ID khóa học: {courseId}
+                  </p>
+                )}
+                {courseInstance?.course?.description && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    {courseInstance.course.description}
+                  </p>
+                )}
+                {!courseInstance?.course?.description &&
+                  !courseInstanceLoading && (
+                    <p className="mt-1 text-sm text-gray-600">Không có mô tả</p>
+                  )}
+                <div className="mt-2 flex flex-wrap gap-4">
+                  <span className="inline-flex items-center text-sm text-gray-600">
+                    <FiUsers className="mr-1.5 h-4 w-4 text-gray-500" />
+                    {totalStudents} học viên
+                  </span>
+                  <span className="inline-flex items-center text-sm text-gray-600">
+                    <FiFileText className="mr-1.5 h-4 w-4 text-gray-500" />
+                    {totalMaterials} tài liệu
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 flex-shrink-0 flex md:mt-0 md:ml-4">
+                <button
+                  type="button"
+                  className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  onClick={() => navigate("/teacher/content/upload")}
+                >
+                  <FiPlus className="-ml-1 mr-2 h-5 w-5" />
+                  Thêm tài liệu
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Tabs */}
@@ -453,7 +635,7 @@ const TeacherCourseDetail = () => {
 
       {/* Main content */}
       <main className="py-6">
-        {/* Search + sort */}
+        {/* Search + sort
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
           <div className="relative w-full sm:max-w-xs">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -516,8 +698,7 @@ const TeacherCourseDetail = () => {
               </div>
             )}
           </div>
-        </div>
-
+        </div> */}
         {/* Tab content */}
         <div className="mt-6">
           {activeTab === "materials" && (
@@ -568,78 +749,176 @@ const TeacherCourseDetail = () => {
                 </div>
               </div>
               <div className="border-t border-gray-200">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Họ và tên
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Email
-                        </th>
-                        <th
-                          scope="col"
-                          className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          Trạng thái
-                        </th>
-                        <th scope="col" className="relative px-6 py-3">
-                          <span className="sr-only">Hành động</span>
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {students.map((student) => (
-                        <tr key={student.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-medium">
-                                {`${student.firstName[0]}${student.lastName[0]}`}
-                              </div>
-                              <div className="ml-4">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {`${student.lastName} ${student.firstName}`}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {student.role === "student"
-                                    ? "Học viên"
-                                    : "Giảng viên"}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {student.email}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                student.status === "active"
-                                  ? "bg-green-100 text-green-800"
-                                  : student.status === "inactive"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
+                {studentsLoading ? (
+                  <div className="p-12">
+                    <AdminLoading message="Đang tải danh sách học viên..." />
+                  </div>
+                ) : studentsError ? (
+                  <div className="p-6 text-center">
+                    <p className="text-sm font-medium text-red-600">
+                      {studentsError}
+                    </p>
+                  </div>
+                ) : students.length === 0 ? (
+                  <div className="p-12 text-center">
+                    <FiUsers className="mx-auto h-12 w-12 text-gray-400" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Chưa có học viên nào
+                    </h3>
+                    <p className="mt-1 text-sm text-gray-500">
+                      Chưa có học viên nào được đăng ký vào khóa học này.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                             >
-                              {student.status === "active"
-                                ? "Đang hoạt động"
-                                : student.status === "inactive"
-                                ? "Tạm dừng"
-                                : "Bị khoá"}
-                            </span>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                              Họ và tên
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Email
+                            </th>
+                            <th
+                              scope="col"
+                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                            >
+                              Trạng thái
+                            </th>
+                            <th scope="col" className="relative px-6 py-3">
+                              <span className="sr-only">Hành động</span>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {students.map((student) => (
+                            <tr key={student.id} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-medium">
+                                    {`${student.firstName[0] || ""}${
+                                      student.lastName[0] || ""
+                                    }`}
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">
+                                      {`${student.lastName} ${student.firstName}`}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {student.role === "student"
+                                        ? "Học viên"
+                                        : student.role === "teacher"
+                                        ? "Giảng viên"
+                                        : "Quản trị viên"}
+                                    </div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {student.email}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <span
+                                  className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                                    student.status === "active"
+                                      ? "bg-green-100 text-green-800"
+                                      : student.status === "inactive"
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {student.status === "active"
+                                    ? "Đang hoạt động"
+                                    : student.status === "inactive"
+                                    ? "Tạm dừng"
+                                    : "Bị khoá"}
+                                </span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {/* Pagination */}
+                    {studentsTotalPages > 1 && (
+                      <div className="px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+                        <div className="flex-1 flex justify-between sm:hidden">
+                          <button
+                            onClick={() =>
+                              setStudentsPage((p) => Math.max(0, p - 1))
+                            }
+                            disabled={studentsPage === 0}
+                            className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Trước
+                          </button>
+                          <button
+                            onClick={() =>
+                              setStudentsPage((p) =>
+                                Math.min(studentsTotalPages - 1, p + 1)
+                              )
+                            }
+                            disabled={studentsPage >= studentsTotalPages - 1}
+                            className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            Sau
+                          </button>
+                        </div>
+                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm text-gray-700">
+                              Trang{" "}
+                              <span className="font-medium">
+                                {studentsPage + 1}
+                              </span>{" "}
+                              /{" "}
+                              <span className="font-medium">
+                                {studentsTotalPages}
+                              </span>
+                            </p>
+                          </div>
+                          <div>
+                            <nav
+                              className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                              aria-label="Pagination"
+                            >
+                              <button
+                                onClick={() =>
+                                  setStudentsPage((p) => Math.max(0, p - 1))
+                                }
+                                disabled={studentsPage === 0}
+                                className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Trước
+                              </button>
+                              <button
+                                onClick={() =>
+                                  setStudentsPage((p) =>
+                                    Math.min(studentsTotalPages - 1, p + 1)
+                                  )
+                                }
+                                disabled={
+                                  studentsPage >= studentsTotalPages - 1
+                                }
+                                className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                Sau
+                              </button>
+                            </nav>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}

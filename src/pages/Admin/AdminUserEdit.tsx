@@ -222,7 +222,7 @@ const AdminUserEdit = () => {
                 Chỉnh sửa người dùng
               </p>
               <h1 className="mt-2 text-2xl font-bold text-gray-900">
-                {user.firstName} {user.lastName}
+                {user.lastName} {user.firstName}
               </h1>
               <p className="mt-1 text-base text-gray-600">{user.email}</p>
             </div>
@@ -259,9 +259,9 @@ const AdminUserEdit = () => {
               </label>
               <input
                 type="text"
-                name="firstName"
+                name="lastName"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                value={formData.firstName}
+                value={formData.lastName}
                 onChange={handleChange}
                 disabled={saving}
                 required
@@ -273,9 +273,9 @@ const AdminUserEdit = () => {
               </label>
               <input
                 type="text"
-                name="lastName"
+                name="firstName"
                 className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-base focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                value={formData.lastName}
+                value={formData.firstName}
                 onChange={handleChange}
                 disabled={saving}
                 required

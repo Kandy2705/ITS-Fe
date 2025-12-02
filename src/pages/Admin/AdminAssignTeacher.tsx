@@ -482,7 +482,7 @@ const AdminAssignTeacher = () => {
                               />
                             </td>
                             <td className="px-4 py-3 text-base text-gray-900">
-                              {teacher.firstName} {teacher.lastName}
+                              {teacher.lastName} {teacher.firstName}
                             </td>
                             <td className="px-4 py-3 text-base text-gray-700">
                               {teacher.email}

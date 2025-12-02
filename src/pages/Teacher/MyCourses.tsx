@@ -1,6 +1,15 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router";
 import { FiSearch, FiChevronDown, FiChevronUp } from "react-icons/fi";
+import axios from "axios";
+import api from "../../utils/api";
+import AdminLoading from "../../components/common/AdminLoading";
+import AdminPagination from "../../components/common/AdminPagination";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
+import type { User } from "../../interfaces/user";
+
+const PAGE_SIZE = 6; // 6 courses per page for grid layout
 
 type SortOption =
   | "progress-asc"
@@ -10,42 +19,156 @@ type SortOption =
   | "title-asc"
   | "title-desc";
 
-const teacherCourses = [
-  {
-    id: "ds-teach",
-    courseCode: "CS101",
-    title: "Thiết kế bài tập cấu trúc dữ liệu",
-    progress: 85,
-    credits: 3,
-    students: 45,
-  },
-  {
-    id: "ml-path",
-    courseCode: "ML201",
-    title: "Lộ trình Máy học 8 tuần",
-    progress: 23,
-    credits: 4,
-    students: 32,
-  },
-  {
-    id: "web-advanced",
-    courseCode: "WEB301",
-    title: "Phát triển Web nâng cao",
-    progress: 60,
-    credits: 3,
-    students: 28,
-  },
-];
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string | null;
+  description: string | null;
+  credit: string | null;
+  status: string;
+}
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: User;
+  status: CourseInstanceStatus;
+}
+
+interface CourseDisplay {
+  id: string;
+  courseCode: string;
+  title: string;
+  progress: number;
+  credits: number;
+  students: number;
+  status: CourseInstanceStatus;
+}
 
 const TeacherCourses = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("title-asc");
   const [isSortOpen, setIsSortOpen] = useState(false);
+  const [courses, setCourses] = useState<CourseDisplay[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [teacherId, setTeacherId] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageData, setPageData] = useState<PageResponse<CourseInstance> | null>(
+    null
+  );
 
+  // Fetch current user info to get teacher ID
+  const fetchCurrentUser = useCallback(async () => {
+    try {
+      const res = await api.get<ApiResponse<User>>("/users/me");
+      if (res.data.success && res.data.data) {
+        setTeacherId(res.data.data.id);
+      } else {
+        setError("Không thể lấy thông tin người dùng");
+        setLoading(false);
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi lấy thông tin người dùng";
+      if (axios.isAxiosError(err)) {
+        errorMessage =
+          err.response?.data?.message || err.message || errorMessage;
+      }
+      setError(errorMessage);
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch course instances for the teacher
+  const fetchCourseInstances = useCallback(
+    async (page: number = 0) => {
+      if (!teacherId) return;
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const res = await api.get<ApiResponse<PageResponse<CourseInstance>>>(
+          "/learning-management/courses-instance/getDetailsList",
+          {
+            params: {
+              teacherId: teacherId,
+              page: page,
+              size: PAGE_SIZE,
+            },
+          }
+        );
+
+        if (res.data.success && res.data.data) {
+          const pageResponse = res.data.data;
+          const instances = pageResponse.content || [];
+
+          // Map API response to display format
+          // Note: Progress and student count might need to be fetched separately
+          // For now, we'll use placeholder values
+          const mappedCourses: CourseDisplay[] = instances.map((instance) => ({
+            id: instance.id,
+            courseCode: instance.course.code || "N/A",
+            title: instance.course.title,
+            progress: 0, // TODO: Calculate actual progress from student data
+            credits: parseInt(instance.course.credit || "0", 10) || 0,
+            students: 0, // TODO: Fetch actual student count
+            status: instance.status,
+          }));
+
+          setCourses(mappedCourses);
+          setPageData(pageResponse);
+          setCurrentPage(page);
+        } else {
+          setError(res.data.message || "Không thể tải danh sách khóa học");
+        }
+      } catch (err: unknown) {
+        let errorMessage = "Đã xảy ra lỗi khi tải danh sách khóa học";
+        if (axios.isAxiosError(err)) {
+          if (err.response?.data && typeof err.response.data === "object") {
+            const data = err.response.data as { message?: string };
+            errorMessage = data.message || err.message || errorMessage;
+          } else {
+            errorMessage = err.message || errorMessage;
+          }
+        } else if (err instanceof Error) {
+          errorMessage = err.message;
+        }
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [teacherId]
+  );
+
+  // Fetch current user on mount
+  useEffect(() => {
+    void fetchCurrentUser();
+  }, [fetchCurrentUser]);
+
+  // Fetch course instances when teacherId is available
+  useEffect(() => {
+    if (teacherId) {
+      void fetchCourseInstances(0);
+    }
+  }, [teacherId, fetchCourseInstances]);
+
+  // Handle page change
+  const handlePageChange = (page: number) => {
+    if (teacherId) {
+      void fetchCourseInstances(page);
+    }
+  };
+
+  // Note: Filtering and sorting is now done on the client side for the current page
+  // If you want server-side filtering/sorting, you'll need to pass these as API params
   const filteredAndSortedCourses = useMemo(() => {
-    let result = [...teacherCourses];
+    let result = [...courses];
 
-    // Filter by search query
+    // Filter by search query (client-side for current page)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -55,7 +178,7 @@ const TeacherCourses = () => {
       );
     }
 
-    // Sort courses
+    // Sort courses (client-side for current page)
     result.sort((a, b) => {
       switch (sortBy) {
         case "progress-asc":
@@ -76,7 +199,7 @@ const TeacherCourses = () => {
     });
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, courses]);
 
   const getSortLabel = (): string => {
     const sortLabels: Record<SortOption, string> = {
@@ -89,6 +212,36 @@ const TeacherCourses = () => {
     };
     return sortLabels[sortBy];
   };
+
+  const getStatusLabel = (status: CourseInstanceStatus): string => {
+    return status === "ACTIVE" ? "Đang hoạt động" : "Ngừng hoạt động";
+  };
+
+  const getStatusColor = (status: CourseInstanceStatus): string => {
+    return status === "ACTIVE"
+      ? "bg-green-100 text-green-500"
+      : "bg-gray-100 text-gray-500";
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <AdminLoading
+          message="Đang tải danh sách khóa học..."
+          minHeight={200}
+        />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <h2 className="text-lg font-semibold text-red-600">Có lỗi xảy ra</h2>
+        <p className="mt-2 text-sm text-gray-700">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -190,24 +343,30 @@ const TeacherCourses = () => {
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-500">
-                    Đang hoạt động
+                  <div
+                    className={`rounded-full px-3 py-1 text-xs font-semibold ${getStatusColor(
+                      course.status
+                    )}`}
+                  >
+                    {getStatusLabel(course.status)}
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-xl bg-gray-50 p-4">
-                <div className="flex items-center justify-between text-sm text-gray-700">
-                  <span>Tiến độ xem bài</span>
-                  <span className="font-semibold">{course.progress}%</span>
+              {course.progress > 0 && (
+                <div className="rounded-xl bg-gray-50 p-4">
+                  <div className="flex items-center justify-between text-sm text-gray-700">
+                    <span>Tiến độ xem bài</span>
+                    <span className="font-semibold">{course.progress}%</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+                    <div
+                      className="h-full rounded-full bg-brand-500"
+                      style={{ width: `${course.progress}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
-                  <div
-                    className="h-full rounded-full bg-brand-500"
-                    style={{ width: `${course.progress}%` }}
-                  />
-                </div>
-              </div>
+              )}
 
               <div className="grid gap-2 text-sm md:grid-cols-2 lg:grid-cols-1">
                 <Link
@@ -221,6 +380,27 @@ const TeacherCourses = () => {
           ))
         )}
       </div>
+
+      {/* Pagination */}
+      {pageData && pageData.totalPages > 1 && (
+        <div className="mt-6">
+          <AdminPagination
+            page={currentPage}
+            totalPages={pageData.totalPages}
+            onPageChange={handlePageChange}
+            disabled={loading}
+          />
+        </div>
+      )}
+
+      {/* Pagination Info */}
+      {pageData && (
+        <div className="mt-4 text-center text-sm text-gray-600">
+          Hiển thị {pageData.numberOfElements} trong tổng số{" "}
+          {pageData.totalElements} khóa học (Trang {pageData.number + 1} /{" "}
+          {pageData.totalPages})
+        </div>
+      )}
     </div>
   );
 };

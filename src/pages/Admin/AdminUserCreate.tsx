@@ -158,12 +158,12 @@ const AdminUserCreate = () => {
               </label>
               <input
                 type="text"
-                name="firstName"
-                value={formData.firstName}
+                name="lastName"
+                value={formData.lastName}
                 onChange={handleChange}
                 disabled={submitting}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-base text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                placeholder="Nguyễn"
+                placeholder="Văn A"
                 required
               />
             </div>
@@ -173,12 +173,12 @@ const AdminUserCreate = () => {
               </label>
               <input
                 type="text"
-                name="lastName"
-                value={formData.lastName}
+                name="firstName"
+                value={formData.firstName}
                 onChange={handleChange}
                 disabled={submitting}
                 className="w-full rounded-lg border border-gray-200 px-3 py-2 text-base text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500"
-                placeholder="Văn A"
+                placeholder="Nguyễn"
                 required
               />
             </div>

@@ -4,6 +4,7 @@ import { ChevronLeftIcon, EyeCloseIcon, EyeIcon } from "../../icons";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import Button from "../ui/button/Button";
+import Alert from "../ui/alert/Alert";
 import { useAppDispatch, useAppSelecteor } from "../../hooks/useRedux";
 import { loginUser } from "../../features/auth/authSlice";
 
@@ -13,13 +14,13 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { loading, error, userInfo, userToken, success } = useAppSelecteor(
+  const { loading, error, userToken, success } = useAppSelecteor(
     (state) => state.auth
   );
 
   const dispatch = useAppDispatch();
 
-  const handleLogin = (e) => {
+  const handleLogin = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const data = {
       email,
@@ -29,9 +30,18 @@ export default function SignInForm() {
     dispatch(loginUser(data));
   };
 
+  // Clear error when user starts typing
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmail(e.target.value);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+  };
+
   useEffect(() => {
     if (success || userToken) navigate("/");
-  }, [success, userToken]);
+  }, [success, userToken, navigate]);
 
   return (
     <div className="flex flex-col flex-1">
@@ -109,6 +119,13 @@ export default function SignInForm() {
             </div> */}
             <form onSubmit={handleLogin}>
               <div className="space-y-6">
+                {error && (
+                  <Alert
+                    variant="error"
+                    title="Đăng nhập thất bại"
+                    message={error}
+                  />
+                )}
                 <div>
                   <Label>
                     Email <span className="text-error-500">*</span>{" "}
@@ -116,7 +133,8 @@ export default function SignInForm() {
                   <Input
                     placeholder="info@gmail.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={handleEmailChange}
+                    error={!!error}
                   />
                 </div>
                 <div>
@@ -128,7 +146,8 @@ export default function SignInForm() {
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      onChange={handlePasswordChange}
+                      error={!!error}
                     />
                     <span
                       onClick={() => setShowPassword(!showPassword)}
@@ -157,8 +176,8 @@ export default function SignInForm() {
                   </Link>
                 </div> */}
                 <div>
-                  <Button className="w-full" size="sm">
-                    Sign in
+                  <Button className="w-full" size="sm" disabled={loading}>
+                    {loading ? "Đang đăng nhập..." : "Sign in"}
                   </Button>
                 </div>
               </div>

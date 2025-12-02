@@ -303,7 +303,7 @@ const AdminEnrollStudents = () => {
                       <td className="px-4 py-3 text-base text-gray-900">
                         <div className="flex flex-col">
                           <span className="font-medium">
-                            {ci.teacher.firstName} {ci.teacher.lastName}
+                            {ci.teacher.lastName} {ci.teacher.firstName}
                           </span>
                           <span className="text-base text-gray-500">
                             {ci.teacher.email}
@@ -412,7 +412,7 @@ const AdminEnrollStudents = () => {
                         />
                       </td>
                       <td className="px-4 py-3 text-base text-gray-900">
-                        {s.firstName} {s.lastName}
+                        {s.lastName} {s.firstName}
                       </td>
                       <td className="px-4 py-3 text-base text-gray-700">
                         {s.email}
