@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
-import { Link, useNavigate } from "react-router";
+import { useNavigate } from "react-router";
 import { useAppDispatch, useAppSelecteor } from "../../hooks/useRedux";
 import { logout } from "../../features/auth/authSlice";
 
@@ -17,9 +17,13 @@ export default function UserDropdown() {
     setIsOpen(false);
   }
 
-  const { userInfo }: { userInfo: unknown } = useAppSelecteor(
-    (state) => state.auth
-  );
+  const { userInfo } = useAppSelecteor((state) => state.auth) as {
+    userInfo: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    } | null;
+  };
 
   const dispatch = useAppDispatch();
 
@@ -28,9 +32,15 @@ export default function UserDropdown() {
     navigate("/signin");
   };
 
+  useEffect(() => {
+    if (!userInfo) {
+      navigate("/signin");
+    }
+  }, [userInfo, navigate]);
+
   if (!userInfo) {
-    navigate("/signin");
-    return;
+    // While redirecting, render nothing to avoid calling navigate during render
+    return null;
   }
 
   return (
