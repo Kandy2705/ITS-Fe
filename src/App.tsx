@@ -16,9 +16,6 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
-import AuthPortal from "./pages/Lms/AuthPortal";
-import MyCourses from "./pages/Lms/MyCourses";
-import CourseDetail from "./pages/Lms/CourseDetail";
 import AdminUsers from "./pages/Admin/AdminUsers";
 import AdminUserDetail from "./pages/Admin/AdminUserDetail";
 import AdminUserEdit from "./pages/Admin/AdminUserEdit";
@@ -31,23 +28,13 @@ import CourseMembers from "./pages/Admin/CourseMembers";
 import AdminCourseInstances from "./pages/Admin/AdminCourseInstances";
 import AdminEnrollStudents from "./pages/Admin/AdminEnrollStudents";
 import NewCourse from "./pages/Admin/NewCourse";
-import ProgramBuilder from "./pages/Lms/ProgramBuilder";
-import ExerciseCreator from "./pages/Lms/ExerciseCreator";
-import QuizBuilder from "./pages/Lms/QuizBuilder";
 import TeacherCourses from "./pages/Teacher/MyCourses";
 import TeacherCourseDetail from "./pages/Teacher/CourseDetail";
-import TeacherFileDetail from "./pages/Teacher/FileDetail";
 import TeacherUploadMaterial from "./pages/Teacher/TeacherUploadMaterial";
-import TeacherNewCourse from "./pages/Teacher/TeacherNewCourse";
-import TeacherLearningContent from "./pages/Teacher/TeacherLearningContent";
-import TeacherDocument from "./pages/Teacher/TeacherDocument";
 import TeacherEditMaterial from "./pages/Teacher/TeacherEditMaterial";
-import TeacherAssignments from "./pages/Teacher/TeacherAssignments";
 import StudentCourses from "./pages/Student/MyCourses";
 import StudentCourseDetail from "./pages/Student/CourseDetail";
 import StudentFileDetail from "./pages/Student/FileDetail";
-import StudentLearningContent from "./pages/Student/StudentLearningContent";
-import StudentSubmissionHistory from "./pages/Student/StudentSubmissionHistory";
 import AdminLearningContent from "./pages/Admin/AdminLearningContent";
 import FileDetail from "./pages/Teacher/FileDetail";
 
@@ -60,18 +47,14 @@ export default function App() {
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
             <Route index path="/" element={<Home />} />
-
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
             {/* <Route path="/calendar" element={<Calendar />} /> */}
             <Route path="/blank" element={<Blank />} />
-
             {/* Forms */}
             <Route path="/form-elements" element={<FormElements />} />
-
             {/* Tables */}
             <Route path="/basic-tables" element={<BasicTables />} />
-
             {/* Ui Elements */}
             <Route path="/alerts" element={<Alerts />} />
             <Route path="/avatars" element={<Avatars />} />
@@ -79,23 +62,9 @@ export default function App() {
             <Route path="/buttons" element={<Buttons />} />
             <Route path="/images" element={<Images />} />
             <Route path="/videos" element={<Videos />} />
-
             {/* Charts */}
             <Route path="/line-chart" element={<LineChart />} />
             <Route path="/bar-chart" element={<BarChart />} />
-
-            {/* LMS Pages */}
-            <Route path="/lms/auth" element={<AuthPortal />} />
-            <Route path="/lms/courses" element={<MyCourses />} />
-
-            <Route path="/lms/courses/:id" element={<CourseDetail />} />
-            <Route
-              path="/lms/courses/:id/files/:fileId"
-              element={<FileDetail />}
-            />
-            <Route path="/lms/programs/new" element={<ProgramBuilder />} />
-            <Route path="/lms/exercises/new" element={<ExerciseCreator />} />
-            <Route path="/lms/quizzes/new" element={<QuizBuilder />} />
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/users/new" element={<AdminUserCreate />} />
             <Route path="/admin/users/:id" element={<AdminUserDetail />} />
@@ -128,30 +97,19 @@ export default function App() {
               element={<AdminAssignTeacher />}
             />
             <Route path="/admin/content" element={<AdminLearningContent />} />
-
             {/* Teacher Routes */}
-            <Route path="/teacher/courses" element={<TeacherCourses />} />
-            <Route path="/teacher/courses/new" element={<TeacherNewCourse />} />
+            <Route path="/teacher/courses" element={<TeacherCourses />} />{" "}
             <Route
               path="/teacher/courses/:id"
               element={<TeacherCourseDetail />}
             />
             <Route
-              path="/teacher/courses/:courseId/files/:fileId"
-              element={<TeacherFileDetail />}
-            />
-            <Route
-              path="/teacher/content"
-              element={<TeacherLearningContent />}
+              path="/teacher/courses/:courseInstanceId/upload"
+              element={<TeacherUploadMaterial />}
             />
             <Route
               path="/teacher/content/upload"
               element={<TeacherUploadMaterial />}
-            />
-            <Route path="/teacher/document" element={<TeacherDocument />} />
-            <Route
-              path="/teacher/assignments"
-              element={<TeacherAssignments />}
             />
             <Route
               path="/teacher/courses/:courseId/materials/:materialId"
@@ -161,7 +119,6 @@ export default function App() {
               path="/teacher/courses/:courseId/materials/:materialId/edit"
               element={<TeacherEditMaterial />}
             />
-
             {/* Student Routes */}
             <Route path="/student/courses" element={<StudentCourses />} />
             <Route
@@ -172,19 +129,10 @@ export default function App() {
               path="/student/courses/:courseId/files/:fileId"
               element={<StudentFileDetail />}
             />
-            <Route
-              path="/student/content"
-              element={<StudentLearningContent />}
-            />
-            <Route
-              path="/student/submissions"
-              element={<StudentSubmissionHistory />}
-            />
           </Route>
 
           {/* Auth Layout */}
           <Route path="/signin" element={<SignIn />} />
-          {/* <Route path="/signup" element={<SignUp />} /> */}
 
           {/* Fallback Route */}
           <Route path="*" element={<NotFound />} />

@@ -1,14 +1,41 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
+import axios from "axios";
+import api from "../../utils/api";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import type { ApiResponse } from "../../interfaces/api";
+import type { PageResponse } from "../../interfaces/pagination";
 import {
   FiSearch,
   FiCalendar,
   FiChevronDown,
   FiChevronUp,
 } from "react-icons/fi";
-import { Link } from "react-router-dom";
 
+// Content from API
+type ApiContentType =
+  | "DOCUMENT"
+  | "LECTURE"
+  | "VIDEO"
+  | "IMAGE"
+  | "LINK"
+  | "MATERIAL";
+type ApiContentStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED";
+
+interface Content {
+  id: string;
+  courseInstanceId: string;
+  title: string;
+  description: string | null;
+  type: ApiContentType;
+  status: ApiContentStatus;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Material type for display (mapped from Content)
 type MaterialType = "document" | "slide" | "video" | "image" | "reading";
 type MaterialStatus = "active" | "inactive" | "hidden";
 
@@ -27,88 +54,6 @@ interface LearningMaterial {
   updatedAt: string;
 }
 
-const learningMaterials: LearningMaterial[] = [
-  {
-    id: "c1",
-    courseInstanceId: "ci-1",
-    title: "Giới thiệu khoá học",
-    description: "Tổng quan về mục tiêu, phạm vi và cách sử dụng hệ thống ITS.",
-    type: "document",
-    status: "active",
-    orderIndex: 1,
-    dueDate: null,
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: false,
-    createdAt: "2025-11-25T10:00:00Z",
-    updatedAt: "2025-11-25T10:00:00Z",
-  },
-  {
-    id: "c2",
-    courseInstanceId: "ci-1",
-    title: "Tài liệu: Phân tích yêu cầu ITS",
-    description:
-      "Bài đọc về stakeholder, functional và non-functional requirements.",
-    type: "reading",
-    status: "active",
-    orderIndex: 2,
-    dueDate: "2025-12-10T23:59:59Z", // ví dụ: chỉ xem được tới ngày này
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: true,
-    createdAt: "2025-11-26T09:00:00Z",
-    updatedAt: "2025-11-26T09:00:00Z",
-  },
-  {
-    id: "c3",
-    courseInstanceId: "ci-1",
-    title: "Video: Dự báo lộ trình tự động",
-    description:
-      "Video giải thích thuật toán recommendation cho lộ trình học thích ứng.",
-    type: "video",
-    status: "hidden",
-    orderIndex: 3,
-    dueDate: null,
-    allowAt: "2025-12-15T00:00:00Z",
-    allowedLate: false,
-    createdAt: "2025-11-27T14:00:00Z",
-    updatedAt: "2025-11-27T14:00:00Z",
-  },
-];
-
-const comments = [
-  {
-    name: "Bạn",
-    role: "Sinh viên",
-    avatar: "B",
-    time: "5 phút trước",
-    text: "Tài liệu rất hữu ích, nhưng phần 2.3 hơi khó hiểu.",
-    isMe: true,
-  },
-  {
-    name: "Nguyễn Văn A",
-    role: "Sinh viên",
-    avatar: "A",
-    time: "2 giờ trước",
-    text: "Ai giải thích giúp mình phần 3.2 với ạ?",
-    isMe: false,
-  },
-  {
-    name: "Trần Thị B",
-    role: "Sinh viên",
-    avatar: "T",
-    time: "3 giờ trước",
-    text: "Tôi cũng đang thắc mắc phần đó. @Nguyễn Văn A chúng ta có thể thảo luận thêm không?",
-    isMe: false,
-  },
-  {
-    name: "ITS Bot",
-    role: "Hỗ trợ AI",
-    avatar: "AI",
-    time: "Hôm qua",
-    text: "Dựa trên tiến độ của bạn, tôi đề xuất xem kỹ phần 2.3 và làm bài tập liên quan để hiểu sâu hơn.",
-    isMe: false,
-  },
-];
-
 type SortOption = "newest" | "oldest";
 
 const StudentCourseDetail = () => {
@@ -117,20 +62,102 @@ const StudentCourseDetail = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [newComment, setNewComment] = useState("");
-  const [isLiked, setIsLiked] = useState(false);
 
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newComment.trim()) {
-      // In a real app, you would add the comment to the state or send it to an API
-      console.log("New comment:", newComment);
-      setNewComment("");
-    }
+  // Contents state
+  const [contents, setContents] = useState<Content[]>([]);
+  const [contentsLoading, setContentsLoading] = useState(false);
+  const [contentsError, setContentsError] = useState<string | null>(null);
+
+  // Map Content from API to LearningMaterial for display
+  const mapContentToMaterial = (content: Content): LearningMaterial => {
+    // Map ApiContentType to MaterialType
+    const typeMap: Record<ApiContentType, MaterialType> = {
+      DOCUMENT: "document",
+      LECTURE: "slide",
+      VIDEO: "video",
+      IMAGE: "image",
+      LINK: "reading",
+      MATERIAL: "document",
+    };
+
+    // Map ApiContentStatus to MaterialStatus
+    const statusMap: Record<ApiContentStatus, MaterialStatus> = {
+      PUBLISHED: "active",
+      DRAFT: "inactive",
+      ARCHIVED: "hidden",
+    };
+
+    return {
+      id: content.id,
+      courseInstanceId: content.courseInstanceId,
+      title: content.title,
+      description: content.description || "",
+      type: typeMap[content.type] || "document",
+      status: statusMap[content.status] || "inactive",
+      orderIndex: content.orderIndex,
+      dueDate: null, // API doesn't provide this
+      allowAt: content.createdAt,
+      allowedLate: true, // Default value
+      createdAt: content.createdAt,
+      updatedAt: content.updatedAt,
+    };
   };
 
+  // Fetch contents from API
+  const fetchContents = useCallback(async () => {
+    if (!id) return;
+
+    setContentsLoading(true);
+    setContentsError(null);
+
+    try {
+      const res = await api.get<ApiResponse<PageResponse<Content>>>(
+        "/learning-management/contents",
+        {
+          params: {
+            courseInstanceId: id,
+            page: 0,
+            size: 100, // Get all contents
+            sort: "orderIndex",
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        const apiContents = res.data.data.content || [];
+        setContents(apiContents);
+      } else {
+        setContentsError(
+          res.data.message || "Không thể tải danh sách tài liệu"
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải danh sách tài liệu";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setContentsError(errorMessage);
+    } finally {
+      setContentsLoading(false);
+    }
+  }, [id]);
+
+  // Fetch contents on mount
+  useEffect(() => {
+    void fetchContents();
+  }, [fetchContents]);
+
   const filteredAndSortedMaterials = useMemo(() => {
-    let result = [...learningMaterials];
+    // Map contents to materials
+    const materials = contents.map(mapContentToMaterial);
+    let result = [...materials];
 
     // Filter by search query
     if (searchQuery) {
@@ -152,7 +179,7 @@ const StudentCourseDetail = () => {
     });
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, contents]);
 
   const getStatusLabel = (status: MaterialStatus): string => {
     const statusMap: Record<MaterialStatus, string> = {
@@ -184,16 +211,10 @@ const StudentCourseDetail = () => {
     <>
       <PageMeta
         title="Khoá học của tôi"
-        description="Theo dõi tiến độ học tập và nhiệm vụ của bạn"
+        description="Xem và quản lý tài liệu học tập"
       />
 
-      <div className="mb-4 flex items-center text-sm text-gray-600">
-        <Link to="/student/courses" className="hover:text-brand-600">
-          Khóa học của tôi
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900">Nhập môn điện toán</span>
-      </div>
+      <PageBreadcrumb pageTitle="Chi tiết khóa học" />
 
       <div className="space-y-4">
         <div className="rounded-2xl bg-white p-6 shadow-card">
@@ -297,15 +318,31 @@ const StudentCourseDetail = () => {
                   </div>
                 </div>
               </div>
+              {contentsError && (
+                <div className="mt-4 rounded-lg border border-red-300 bg-red-50 p-4">
+                  <p className="text-sm font-medium text-red-800">
+                    {contentsError}
+                  </p>
+                </div>
+              )}
               <div className="mt-4 space-y-4">
-                {filteredAndSortedMaterials.length === 0 ? (
+                {contentsLoading ? (
+                  <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
+                    <div className="mx-auto h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-brand-600"></div>
+                    <h3 className="mt-2 text-sm font-medium text-gray-900">
+                      Đang tải tài liệu...
+                    </h3>
+                  </div>
+                ) : filteredAndSortedMaterials.length === 0 ? (
                   <div className="rounded-lg border-2 border-dashed border-gray-300 p-12 text-center">
                     <FiSearch className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900">
                       Không tìm thấy tài liệu
                     </h3>
                     <p className="mt-1 text-sm text-gray-500">
-                      Thử thay đổi từ khoá tìm kiếm hoặc bộ lọc
+                      {searchQuery
+                        ? "Thử thay đổi từ khoá tìm kiếm hoặc bộ lọc"
+                        : "Chưa có tài liệu nào trong khóa học này"}
                     </p>
                   </div>
                 ) : (
@@ -337,7 +374,7 @@ const StudentCourseDetail = () => {
                               : "bg-gray-300"
                           }`}
                         >
-                          {material.orderIndex}
+                          {material.orderIndex + 1}
                         </span>
 
                         <div className="flex-1">
@@ -390,129 +427,6 @@ const StudentCourseDetail = () => {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl bg-white p-6 shadow-card">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900">Diễn đàn</h3>
-          </div>
-
-          <form onSubmit={handleCommentSubmit} className="mt-4">
-            <div className="flex items-start gap-3">
-              <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
-                B
-              </div>
-              <div className="flex-1">
-                <textarea
-                  rows={3}
-                  className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                  placeholder="Đặt câu hỏi hoặc bình luận về tài liệu này..."
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                />
-                <div className="mt-2 flex items-center justify-between">
-                  <div className="flex gap-2"></div>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-brand-600 px-12 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                    disabled={!newComment.trim()}
-                  >
-                    Đăng
-                  </button>
-                </div>
-              </div>
-            </div>
-          </form>
-
-          <div className="mt-6 space-y-4">
-            {comments.map((comment, index) => (
-              <div
-                key={index}
-                className={`rounded-xl border p-4 ${
-                  comment.isMe
-                    ? "border-brand-200 bg-brand-50"
-                    : "border-gray-200"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ${
-                      comment.isMe
-                        ? "bg-brand-100 text-brand-700"
-                        : "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {comment.avatar}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-semibold text-gray-900">
-                          {comment.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {comment.role} • {comment.time}
-                        </p>
-                      </div>
-                      {comment.isMe && (
-                        <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800">
-                          Bạn
-                        </span>
-                      )}
-                    </div>
-                    <p className="mt-2 text-gray-700">{comment.text}</p>
-                    <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                      <button
-                        className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-gray-100"
-                        onClick={() => setIsLiked(!isLiked)}
-                      >
-                        <svg
-                          className={`h-4 w-4 ${
-                            isLiked ? "text-brand-600 fill-current" : ""
-                          }`}
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d={
-                              isLiked
-                                ? "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                                : "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                            }
-                          />
-                        </svg>
-                        <span>{isLiked ? "Đã thích" : "Thích"}</span>
-                      </button>
-                      <button className="rounded-full px-2 py-1 hover:bg-gray-100">
-                        Trả lời
-                      </button>
-                      {!comment.isMe && (
-                        <button className="ml-auto rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500">
-                          <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={1.5}
-                              d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-                            />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </div>

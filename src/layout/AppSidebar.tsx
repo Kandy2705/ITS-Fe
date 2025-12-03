@@ -1,114 +1,79 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
 import {
-  BoxCubeIcon,
-  // CalenderIcon,
-  ChevronDownIcon,
   HorizontaLDots,
-  // PieChartIcon,
-  PlugInIcon,
   UserCircleIcon,
+  ListIcon,
+  FolderIcon,
+  GroupIcon,
+  PlusIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
+import { useAppSelecteor } from "../hooks/useRedux";
+import type { UserRole } from "../interfaces/user";
 // import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
   icon: React.ReactNode;
-  path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  path: string;
+  role: UserRole;
 };
 
-const navItems: NavItem[] = [
-  // {
-  //   icon: <GridIcon />,
-  //   name: "Dashboard",
-  //   subItems: [{ name: "Tổng quan", path: "/", pro: false }],
-  // },
+// Define all menu items as flat structure
+const allNavItems: NavItem[] = [
+  // Admin items
   {
+    name: "Quản lý người dùng",
     icon: <UserCircleIcon />,
-    name: "Admin",
-    subItems: [
-      { name: "Quản lý người dùng", path: "/admin/users" },
-      { name: "Quản lý khóa học", path: "/admin/courses" },
-      { name: "Danh sách lớp học", path: "/admin/courses/instances" },
-      { name: "Gán sinh viên vào lớp", path: "/admin/course-instances/enroll" },
-      { name: "Gán giáo viên", path: "/admin/assign-teacher" },
-      { name: "Tạo khoá học", path: "/admin/courses/new" },
-      // { name: "Phân quyền", path: "/admin/content" },
-      // { name: "Báo cáo khóa học", path: "/admin/analytics" },
-    ],
+    path: "/admin/users",
+    role: "ADMIN",
   },
   {
+    name: "Quản lý khóa học",
+    icon: <ListIcon />,
+    path: "/admin/courses",
+    role: "ADMIN",
+  },
+  {
+    name: "Danh sách lớp học",
+    icon: <FolderIcon />,
+    path: "/admin/courses/instances",
+    role: "ADMIN",
+  },
+  {
+    name: "Gán sinh viên vào lớp",
+    icon: <GroupIcon />,
+    path: "/admin/course-instances/enroll",
+    role: "ADMIN",
+  },
+  {
+    name: "Gán giáo viên",
     icon: <UserCircleIcon />,
-    name: "Giáo viên",
-    subItems: [
-      // { name: "Tạo khóa học mới", path: "/teacher/courses/new" },
-      { name: "Khóa học của tôi", path: "/teacher/courses" },
-      { name: "Tài liệu của tôi", path: "/teacher/document" },
-      // { name: "Lớp học", path: "/teacher/classes" },
-      // { name: "Kho bài tập", path: "/teacher/assignments" },
-      // { name: "Điểm số", path: "/teacher/grades" },
-      // { name: "Test", path: "/teacher/content" },
-    ],
+    path: "/admin/assign-teacher",
+    role: "ADMIN",
   },
   {
-    icon: <UserCircleIcon />,
-    name: "Học viên",
-    subItems: [
-      { name: "Khóa học của tôi", path: "/student/courses" },
-      // { name: "Bài tập", path: "/student/content" },
-      // { name: "Lịch sử bài tập", path: "/student/submissions" },
-      // { name: "Điểm số", path: "/student/grades" },
-      // { name: "Thời khóa biểu", path: "/student/schedule" },
-    ],
+    name: "Tạo khoá học",
+    icon: <PlusIcon />,
+    path: "/admin/courses/new",
+    role: "ADMIN",
   },
+  // Teacher items
   {
-    icon: <BoxCubeIcon />,
-    name: "LMS",
-    subItems: [
-      // { name: "Đăng nhập/Đăng ký", path: "/lms/auth" },
-      // { name: "Khoá học của tôi", path: "/lms/courses" },
-
-      // { name: "Chi tiết khoá học", path: "/lms/courses/demo" },
-      { name: "Chi tiết file", path: "/lms/courses/demo/files/slide" },
-      { name: "Tạo chương trình", path: "/lms/programs/new" },
-      { name: "Bài lập trình", path: "/lms/exercises/new" },
-      { name: "Quiz Builder", path: "/lms/quizzes/new" },
-    ],
+    name: "Khóa học của tôi",
+    icon: <FolderIcon />,
+    path: "/teacher/courses",
+    role: "TEACHER",
   },
-];
-
-const othersItems: NavItem[] = [
-  // {
-  //   icon: <PieChartIcon />,
-  //   name: "Charts",
-  //   subItems: [
-  //     { name: "Line Chart", path: "/line-chart", pro: false },
-  //     { name: "Bar Chart", path: "/bar-chart", pro: false },
-  //   ],
-  // },
+  // Student items
   {
-    icon: <BoxCubeIcon />,
-    name: "UI Elements",
-    subItems: [
-      { name: "Alerts", path: "/alerts", pro: false },
-      { name: "Avatar", path: "/avatars", pro: false },
-      { name: "Badge", path: "/badge", pro: false },
-      { name: "Buttons", path: "/buttons", pro: false },
-      { name: "Images", path: "/images", pro: false },
-      { name: "Videos", path: "/videos", pro: false },
-    ],
-  },
-  {
-    icon: <PlugInIcon />,
-    name: "Authentication",
-    subItems: [
-      { name: "Sign In", path: "/signin", pro: false },
-      { name: "Sign Up", path: "/signup", pro: false },
-    ],
+    name: "Khóa học của tôi",
+    icon: <FolderIcon />,
+    path: "/student/courses",
+    role: "STUDENT",
   },
 ];
 
@@ -116,14 +81,18 @@ const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
   const location = useLocation();
 
-  const [openSubmenu, setOpenSubmenu] = useState<{
-    type: "main" | "others";
-    index: number;
-  } | null>(null);
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
-    {}
-  );
-  const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  // Get user role from Redux
+  const { userInfo } = useAppSelecteor((state) => state.auth) as {
+    userInfo: { role?: string } | null;
+  };
+
+  const userRole = userInfo?.role?.toUpperCase() as UserRole | undefined;
+
+  // Filter menu items based on user role
+  const filteredNavItems = useMemo(() => {
+    if (!userRole) return [];
+    return allNavItems.filter((item) => item.role === userRole);
+  }, [userRole]);
 
   // const isActive = (path: string) => location.pathname === path;
   const isActive = useCallback(
@@ -131,173 +100,29 @@ const AppSidebar: React.FC = () => {
     [location.pathname]
   );
 
-  useEffect(() => {
-    let submenuMatched = false;
-    ["main", "others"].forEach((menuType) => {
-      const items = menuType === "main" ? navItems : othersItems;
-      items.forEach((nav, index) => {
-        if (nav.subItems) {
-          nav.subItems.forEach((subItem) => {
-            if (isActive(subItem.path)) {
-              setOpenSubmenu({
-                type: menuType as "main" | "others",
-                index,
-              });
-              submenuMatched = true;
-            }
-          });
-        }
-      });
-    });
-
-    if (!submenuMatched) {
-      setOpenSubmenu(null);
-    }
-  }, [location, isActive]);
-
-  useEffect(() => {
-    if (openSubmenu !== null) {
-      const key = `${openSubmenu.type}-${openSubmenu.index}`;
-      if (subMenuRefs.current[key]) {
-        setSubMenuHeight((prevHeights) => ({
-          ...prevHeights,
-          [key]: subMenuRefs.current[key]?.scrollHeight || 0,
-        }));
-      }
-    }
-  }, [openSubmenu]);
-
-  const handleSubmenuToggle = (index: number, menuType: "main" | "others") => {
-    setOpenSubmenu((prevOpenSubmenu) => {
-      if (
-        prevOpenSubmenu &&
-        prevOpenSubmenu.type === menuType &&
-        prevOpenSubmenu.index === index
-      ) {
-        return null;
-      }
-      return { type: menuType, index };
-    });
-  };
-
-  const renderMenuItems = (items: NavItem[], menuType: "main" | "others") => (
+  const renderMenuItems = (items: NavItem[]) => (
     <ul className="flex flex-col gap-4">
-      {items.map((nav, index) => (
+      {items.map((nav) => (
         <li key={nav.name}>
-          {nav.subItems ? (
-            <button
-              onClick={() => handleSubmenuToggle(index, menuType)}
-              className={`menu-item group ${
-                openSubmenu?.type === menuType && openSubmenu?.index === index
-                  ? "menu-item-active"
-                  : "menu-item-inactive"
-              } cursor-pointer ${
-                !isExpanded && !isHovered
-                  ? "lg:justify-center"
-                  : "lg:justify-start"
+          <Link
+            to={nav.path}
+            className={`menu-item group ${
+              isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
+            }`}
+          >
+            <span
+              className={`menu-item-icon-size ${
+                isActive(nav.path)
+                  ? "menu-item-icon-active"
+                  : "menu-item-icon-inactive"
               }`}
             >
-              <span
-                className={`menu-item-icon-size  ${
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? "menu-item-icon-active"
-                    : "menu-item-icon-inactive"
-                }`}
-              >
-                {nav.icon}
-              </span>
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <span className="menu-item-text">{nav.name}</span>
-              )}
-              {(isExpanded || isHovered || isMobileOpen) && (
-                <ChevronDownIcon
-                  className={`ml-auto w-5 h-5 transition-transform duration-200 ${
-                    openSubmenu?.type === menuType &&
-                    openSubmenu?.index === index
-                      ? "rotate-180 text-brand-500"
-                      : ""
-                  }`}
-                />
-              )}
-            </button>
-          ) : (
-            nav.path && (
-              <Link
-                to={nav.path}
-                className={`menu-item group ${
-                  isActive(nav.path) ? "menu-item-active" : "menu-item-inactive"
-                }`}
-              >
-                <span
-                  className={`menu-item-icon-size ${
-                    isActive(nav.path)
-                      ? "menu-item-icon-active"
-                      : "menu-item-icon-inactive"
-                  }`}
-                >
-                  {nav.icon}
-                </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
-                  <span className="menu-item-text">{nav.name}</span>
-                )}
-              </Link>
-            )
-          )}
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
-            <div
-              ref={(el) => {
-                subMenuRefs.current[`${menuType}-${index}`] = el;
-              }}
-              className="overflow-hidden transition-all duration-300"
-              style={{
-                height:
-                  openSubmenu?.type === menuType && openSubmenu?.index === index
-                    ? `${subMenuHeight[`${menuType}-${index}`]}px`
-                    : "0px",
-              }}
-            >
-              <ul className="mt-2 space-y-1 ml-9">
-                {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
-                    <Link
-                      to={subItem.path}
-                      className={`menu-dropdown-item ${
-                        isActive(subItem.path)
-                          ? "menu-dropdown-item-active"
-                          : "menu-dropdown-item-inactive"
-                      }`}
-                    >
-                      {subItem.name}
-                      <span className="flex items-center gap-1 ml-auto">
-                        {subItem.new && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge`}
-                          >
-                            new
-                          </span>
-                        )}
-                        {subItem.pro && (
-                          <span
-                            className={`ml-auto ${
-                              isActive(subItem.path)
-                                ? "menu-dropdown-badge-active"
-                                : "menu-dropdown-badge-inactive"
-                            } menu-dropdown-badge`}
-                          >
-                            pro
-                          </span>
-                        )}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+              {nav.icon}
+            </span>
+            {(isExpanded || isHovered || isMobileOpen) && (
+              <span className="menu-item-text">{nav.name}</span>
+            )}
+          </Link>
         </li>
       ))}
     </ul>
@@ -368,9 +193,9 @@ const AppSidebar: React.FC = () => {
                   <HorizontaLDots className="size-6" />
                 )}
               </h2>
-              {renderMenuItems(navItems, "main")}
+              {renderMenuItems(filteredNavItems)}
             </div>
-            <div className="">
+            {/* <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
                   !isExpanded && !isHovered
@@ -385,7 +210,7 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(othersItems, "others")}
-            </div>
+            </div> */}
           </div>
         </nav>
         {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}

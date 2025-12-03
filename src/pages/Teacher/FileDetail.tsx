@@ -1,110 +1,242 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
+import axios from "axios";
+import api from "../../utils/api";
 import PageMeta from "../../components/common/PageMeta";
+import AdminLoading from "../../components/common/AdminLoading";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import type { ApiResponse } from "../../interfaces/api";
 
-type ContentType = "document" | "slide" | "video" | "image" | "reading";
-type ContentStatus = "active" | "inactive" | "hidden";
+// Content from API
+type ContentType =
+  | "DOCUMENT"
+  | "LECTURE"
+  | "VIDEO"
+  | "IMAGE"
+  | "LINK"
+  | "MATERIAL";
+type ContentStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED";
+type FileType =
+  | "PDF"
+  | "DOCUMENT"
+  | "SPREADSHEET"
+  | "PRESENTATION"
+  | "IMAGE"
+  | "VIDEO"
+  | "AUDIO"
+  | "ZIP"
+  | "OTHER";
 
 interface Content {
   id: string;
   courseInstanceId: string;
   title: string;
-  description: string;
+  description: string | null;
   type: ContentType;
   status: ContentStatus;
   orderIndex: number;
-  dueDate: string | null;
-  allowAt: string;
-  allowedLate: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
-const contents: Content[] = [
-  {
-    id: "c1",
-    courseInstanceId: "ci-1",
-    title: "Giới thiệu khoá học",
-    description: `<p><strong>Giới thiệu tổng quan về môn học</strong>, mục tiêu kiến thức, phạm vi nội dung và hướng dẫn cách sử dụng hệ thống ITS trong suốt quá trình học tập.</p>`,
-    type: "document",
-    status: "active",
-    orderIndex: 1,
-    dueDate: null,
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: false,
-    createdAt: "2025-11-25T10:00:00Z",
-    updatedAt: "2025-11-25T10:00:00Z",
-  },
-  // ... other content items
-];
-
-const fileMeta = {
-  fileName: "bai-giang-chuong-1.pdf",
-  fileType: "PDF",
-  fileSize: "2.4 MB",
-};
+interface Attachment {
+  id: string;
+  ownerId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: FileType;
+  uploadedAt: string;
+}
 
 const formatDate = (iso: string | null) => {
   if (!iso) return "Không giới hạn";
   return new Date(iso).toLocaleString("vi-VN");
 };
 
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+};
+
 const getStatusLabel = (status: ContentStatus) => {
   const map: Record<ContentStatus, string> = {
-    active: "Đang mở",
-    inactive: "Đã đóng",
-    hidden: "Chưa mở",
+    PUBLISHED: "Đang mở",
+    DRAFT: "Bản nháp",
+    ARCHIVED: "Đã đóng",
   };
-  return map[status];
+  return map[status] || status;
 };
 
 const getTypeLabel = (type: ContentType) => {
   const map: Record<ContentType, string> = {
-    document: "Tài liệu (PDF/DOCX/TXT)",
-    slide: "Slide (PPTX)",
-    video: "Video bài giảng",
-    image: "Hình ảnh / infographic",
-    reading: "Bài đọc / chương",
+    DOCUMENT: "Tài liệu",
+    LECTURE: "Slide",
+    VIDEO: "Video",
+    IMAGE: "Hình ảnh",
+    LINK: "Bài đọc",
+    MATERIAL: "Tài liệu",
   };
-  return map[type];
+  return map[type] || type;
+};
+
+const getFileTypeLabel = (fileType: FileType): string => {
+  const map: Record<FileType, string> = {
+    PDF: "PDF",
+    DOCUMENT: "Word/Document",
+    SPREADSHEET: "Excel/Spreadsheet",
+    PRESENTATION: "PowerPoint/Presentation",
+    IMAGE: "Hình ảnh",
+    VIDEO: "Video",
+    AUDIO: "Âm thanh",
+    ZIP: "Nén",
+    OTHER: "Khác",
+  };
+  return map[fileType] || fileType;
 };
 
 const FileDetail = () => {
-  const { courseId, materialId } = useParams();
+  const { courseId, materialId } = useParams<{
+    courseId: string;
+    materialId: string;
+  }>();
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const navigate = useNavigate();
 
-  const currentContent: Content =
-    contents.find((c) => c.id === materialId) ?? contents[0];
+  const [content, setContent] = useState<Content | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attachmentsLoading, setAttachmentsLoading] = useState(false);
 
-  const statusLabel = getStatusLabel(currentContent.status);
-  const typeLabel = getTypeLabel(currentContent.type);
+  // Fetch content detail
+  const fetchContentDetail = useCallback(async () => {
+    if (!materialId) {
+      setError("Không tìm thấy ID tài liệu");
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const res = await api.get<ApiResponse<Content>>(
+        `/learning-management/contents/${materialId}`
+      );
+
+      if (res.data.success && res.data.data) {
+        setContent(res.data.data);
+      } else {
+        setError(res.data.message || "Không thể tải thông tin tài liệu");
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải thông tin tài liệu";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [materialId]);
+
+  // Fetch attachments
+  const fetchAttachments = useCallback(async () => {
+    if (!materialId) return;
+
+    setAttachmentsLoading(true);
+
+    try {
+      const res = await api.get<ApiResponse<Attachment[]>>(
+        `/learning-management/contents/${materialId}/attachments`
+      );
+
+      if (res.data.success && res.data.data) {
+        setAttachments(res.data.data);
+      }
+      // Silently fail for attachments - not critical
+    } catch (err: unknown) {
+      // Silently fail for attachments - not critical
+      console.error("Failed to load attachments:", err);
+    } finally {
+      setAttachmentsLoading(false);
+    }
+  }, [materialId]);
+
+  useEffect(() => {
+    void fetchContentDetail();
+  }, [fetchContentDetail]);
+
+  useEffect(() => {
+    if (content) {
+      void fetchAttachments();
+    }
+  }, [content, fetchAttachments]);
 
   const handleEdit = () => {
     navigate(`/teacher/courses/${courseId}/materials/${materialId}/edit`);
   };
 
+  const handleDownload = (attachment: Attachment) => {
+    window.open(attachment.fileUrl, "_blank");
+  };
+
+  if (loading) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <AdminLoading message="Đang tải thông tin tài liệu..." />
+      </div>
+    );
+  }
+
+  if (error || !content) {
+    return (
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <h2 className="text-lg font-semibold text-red-600">Có lỗi xảy ra</h2>
+        <p className="mt-2 text-sm text-gray-700">
+          {error || "Không tìm thấy tài liệu"}
+        </p>
+      </div>
+    );
+  }
+
+  const statusLabel = getStatusLabel(content.status);
+  const typeLabel = getTypeLabel(content.type);
+
   return (
     <>
       <PageMeta
-        title={`${currentContent.title} - Tài liệu học tập`}
+        title={`${content.title} - Tài liệu học tập`}
         description="Xem và quản lý tài liệu học tập"
       />
+
+      <PageBreadcrumb pageTitle={content.title} />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
           <div className="rounded-2xl bg-white p-6 shadow-card">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="flex-1">
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
                   <span className="rounded-md bg-blue-100 px-2 py-1 font-medium text-blue-800">
                     {typeLabel}
                   </span>
                   <span
                     className={`rounded-md px-2 py-1 font-medium ${
-                      currentContent.status === "active"
+                      content.status === "PUBLISHED"
                         ? "bg-green-100 text-green-800"
-                        : currentContent.status === "hidden"
+                        : content.status === "DRAFT"
                         ? "bg-yellow-100 text-yellow-800"
                         : "bg-gray-100 text-gray-700"
                     }`}
@@ -113,42 +245,94 @@ const FileDetail = () => {
                   </span>
                 </div>
                 <h2 className="text-xl font-semibold text-gray-900">
-                  {currentContent.title}
+                  {content.title}
                 </h2>
+              </div>
+              <div className="flex-shrink-0 flex gap-2">
+                <button
+                  onClick={handleEdit}
+                  className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+                >
+                  Chỉnh sửa
+                </button>
+              </div>
+            </div>
+
+            {/* Description Section */}
+            {content.description && (
+              <div className="mt-6 rounded-xl border border-gray-200 bg-gray-50 p-6">
+                <h3 className="mb-3 text-lg font-semibold text-gray-900">
+                  Mô tả
+                </h3>
                 <div
-                  className="mt-1 text-sm text-gray-600 prose prose-sm max-w-none"
+                  className="text-base text-gray-700 prose prose-base max-w-none"
                   dangerouslySetInnerHTML={{
-                    __html: currentContent.description,
+                    __html: content.description,
                   }}
                 />
               </div>
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                <div className="flex-1 min-w-0">{/* Content here */}</div>
-                <div className="flex-shrink-0 flex gap-2">
-                  <button
-                    onClick={handleEdit}
-                    className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 whitespace-nowrap"
-                  >
-                    Chỉnh sửa
-                  </button>
+            )}
+
+            {/* Tệp đính kèm Section */}
+            <div className="mt-6">
+              <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                Tệp đính kèm
+              </h3>
+              {attachmentsLoading ? (
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center">
+                  <p className="text-sm text-gray-600">
+                    Đang tải tệp đính kèm...
+                  </p>
                 </div>
-              </div>
+              ) : attachments.length === 0 ? (
+                <div className="rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 p-8 text-center">
+                  <p className="text-sm text-gray-600">
+                    Chưa có tệp đính kèm nào
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {attachments.map((attachment) => (
+                    <button
+                      key={attachment.id}
+                      onClick={() => handleDownload(attachment)}
+                      className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-blue-400 hover:bg-blue-50"
+                    >
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <svg
+                          className="h-5 w-5 flex-shrink-0 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        <span className="truncate text-left">
+                          {attachment.fileName}
+                        </span>
+                      </div>
+                      <span className="text-xs text-gray-500 flex-shrink-0">
+                        {getFileTypeLabel(attachment.fileType)} •{" "}
+                        {formatFileSize(attachment.fileSize)}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
               <div className="rounded-xl border border-gray-200 p-3">
                 <p className="text-xs font-semibold uppercase text-gray-500">
-                  Hạn xem
+                  Ngày tạo
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {formatDate(currentContent.dueDate)}
-                </p>
-                <p className="text-xs text-gray-500">
-                  {currentContent.dueDate
-                    ? currentContent.allowedLate
-                      ? "Cho phép truy cập sau hạn"
-                      : "Tự động ẩn sau hạn"
-                    : "Không giới hạn thời gian"}
+                  {formatDate(content.createdAt)}
                 </p>
               </div>
               <div className="rounded-xl border border-gray-200 p-3">
@@ -156,29 +340,8 @@ const FileDetail = () => {
                   Cập nhật lần cuối
                 </p>
                 <p className="text-sm font-semibold text-gray-900">
-                  {formatDate(currentContent.updatedAt)}
+                  {formatDate(content.updatedAt)}
                 </p>
-                <p className="text-xs text-gray-500">
-                  Bởi {currentContent.updatedAt || "Hệ thống"}
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Xem trước tài liệu
-                </h3>
-              </div>
-              <div className="mt-3 flex h-64 items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-center">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">
-                    Xem trước tài liệu {fileMeta.fileType}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    Trình đọc PDF/Slide sẽ được hiển thị tại đây
-                  </p>
-                </div>
               </div>
             </div>
           </div>
@@ -187,49 +350,27 @@ const FileDetail = () => {
         <div className="space-y-4">
           <div className="rounded-2xl bg-white p-5 shadow-card">
             <h3 className="text-lg font-semibold text-gray-900">
-              Thông tin tệp
+              Thông tin tài liệu
             </h3>
             <div className="mt-3 space-y-3 text-sm text-gray-700">
-              <div>
-                <p className="font-medium text-gray-900">Tên tệp</p>
-                <p className="text-gray-600">{fileMeta.fileName}</p>
-              </div>
               <div>
                 <p className="font-medium text-gray-900">Loại nội dung</p>
                 <p className="text-gray-600">{typeLabel}</p>
               </div>
               <div>
-                <p className="font-medium text-gray-900">Loại tệp</p>
-                <p className="text-gray-600">{fileMeta.fileType}</p>
-              </div>
-              <div>
-                <p className="font-medium text-gray-900">Kích thước</p>
-                <p className="text-gray-600">{fileMeta.fileSize}</p>
+                <p className="font-medium text-gray-900">Trạng thái</p>
+                <p className="text-gray-600">{statusLabel}</p>
               </div>
               <div>
                 <p className="font-medium text-gray-900">Ngày tạo</p>
-                <p className="text-gray-600">
-                  {formatDate(currentContent.createdAt)}
-                </p>
+                <p className="text-gray-600">{formatDate(content.createdAt)}</p>
+              </div>
+              <div>
+                <p className="font-medium text-gray-900">Cập nhật lần cuối</p>
+                <p className="text-gray-600">{formatDate(content.updatedAt)}</p>
               </div>
             </div>
             <div className="mt-4 space-y-2 border-t border-gray-200 pt-4">
-              <button className="flex w-full items-center justify-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-semibold text-gray-800 transition hover:border-brand-400 hover:bg-brand-50">
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
-                </svg>
-                Tải xuống tài liệu
-              </button>
               <button
                 onClick={async () => {
                   try {
@@ -277,22 +418,6 @@ const FileDetail = () => {
                   </div>
                 )}
               </button>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-white p-5 shadow-card">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Thống kê truy cập
-            </h3>
-            <div className="mt-3 space-y-3 text-sm text-gray-700">
-              <div className="flex justify-between">
-                <span className="text-gray-600">Lượt xem</span>
-                <span className="font-medium text-gray-900">1,245</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Lượt tải về</span>
-                <span className="font-medium text-gray-900">892</span>
-              </div>
             </div>
           </div>
         </div>

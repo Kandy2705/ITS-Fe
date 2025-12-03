@@ -7,6 +7,7 @@ import Button from "../ui/button/Button";
 import Alert from "../ui/alert/Alert";
 import { useAppDispatch, useAppSelecteor } from "../../hooks/useRedux";
 import { loginUser } from "../../features/auth/authSlice";
+import type { UserRole } from "../../interfaces/user";
 
 export default function SignInForm() {
   const navigate = useNavigate();
@@ -14,9 +15,15 @@ export default function SignInForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const { loading, error, userToken, success } = useAppSelecteor(
+  const { loading, error, userToken, success, userInfo } = useAppSelecteor(
     (state) => state.auth
-  );
+  ) as {
+    loading: boolean;
+    error: string | null;
+    userToken: string | null;
+    success: boolean;
+    userInfo: { role?: string } | null;
+  };
 
   const dispatch = useAppDispatch();
 
@@ -40,8 +47,20 @@ export default function SignInForm() {
   };
 
   useEffect(() => {
-    if (success || userToken) navigate("/");
-  }, [success, userToken, navigate]);
+    if (success || userToken) {
+      const role = userInfo?.role?.toUpperCase() as UserRole | undefined;
+
+      // Navigate based on user role
+      if (role === "TEACHER") {
+        navigate("/teacher/courses");
+      } else if (role === "STUDENT") {
+        navigate("/student/courses");
+      } else {
+        // ADMIN or default -> Home
+        navigate("/");
+      }
+    }
+  }, [success, userToken, userInfo, navigate]);
 
   return (
     <div className="flex flex-col flex-1">

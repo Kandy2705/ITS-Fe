@@ -1,10 +1,47 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import axios from "axios";
+import api from "../../utils/api";
 import PageMeta from "../../components/common/PageMeta";
+import AdminLoading from "../../components/common/AdminLoading";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import type { ApiResponse } from "../../interfaces/api";
+import { FiX } from "react-icons/fi";
 
 type MaterialFormat = "document" | "slide" | "video" | "image" | "reading";
 type ContentType = "document" | "slide" | "video" | "image" | "reading";
-type ContentStatus = "active" | "inactive" | "hidden";
+
+// Content from API
+type ApiContentType =
+  | "DOCUMENT"
+  | "LECTURE"
+  | "VIDEO"
+  | "IMAGE"
+  | "LINK"
+  | "MATERIAL";
+type ApiContentStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED";
+
+interface Content {
+  id: string;
+  courseInstanceId: string;
+  title: string;
+  description: string | null;
+  type: ApiContentType;
+  status: ApiContentStatus;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Attachment {
+  id: string;
+  ownerId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+}
 
 const materialLabels: Record<MaterialFormat, string> = {
   document: "Tài liệu",
@@ -22,89 +59,166 @@ const contentTypeLabels: Record<ContentType, string> = {
   reading: "Bài đọc / chương",
 };
 
-const contentStatusLabels: Record<ContentStatus, string> = {
-  active: "Đang mở cho sinh viên",
-  inactive: "Đã đóng",
-  hidden: "Chưa mở (ẩn với sinh viên)",
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
 };
 
 const TeacherEditMaterial = () => {
   const navigate = useNavigate();
-  const { courseId, materialId } = useParams();
+  const { courseId, materialId } = useParams<{
+    courseId: string;
+    materialId: string;
+  }>();
 
   const [material, setMaterial] = useState({
     title: "",
     format: "document" as MaterialFormat,
     description: "",
-    file: null as File | null,
+    files: [] as File[],
     link: "",
   });
 
   const [contentMeta, setContentMeta] = useState({
     type: "document" as ContentType,
-    status: "active" as ContentStatus,
-    allowAt: "",
-    dueDate: "",
-    allowedLate: false,
   });
+
+  const [existingAttachments, setExistingAttachments] = useState<Attachment[]>(
+    []
+  );
+  const [attachmentsToDelete, setAttachmentsToDelete] = useState<string[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  // Map API ContentType to frontend MaterialFormat
+  const mapApiTypeToFormat = (apiType: ApiContentType): MaterialFormat => {
+    const typeMap: Record<ApiContentType, MaterialFormat> = {
+      DOCUMENT: "document",
+      LECTURE: "slide",
+      VIDEO: "video",
+      IMAGE: "image",
+      LINK: "reading",
+      MATERIAL: "document",
+    };
+    return typeMap[apiType] || "document";
+  };
+
+  // Map frontend ContentType to API ContentType
+  const mapContentTypeToEnum = (type: ContentType): ApiContentType => {
+    const mapping: Record<ContentType, ApiContentType> = {
+      document: "DOCUMENT",
+      slide: "LECTURE",
+      video: "VIDEO",
+      image: "IMAGE",
+      reading: "LINK",
+    };
+    return mapping[type] || "DOCUMENT";
+  };
+
+  // Fetch content detail and attachments
+  const fetchContentDetail = useCallback(async () => {
     if (!materialId) {
       navigate(`/teacher/courses/${courseId || ""}`);
       return;
     }
 
-    // Simulate API call to fetch material data
-    const fetchMaterial = async () => {
-      setIsLoading(true);
-      try {
-        // Replace with actual API call
-        // const response = await fetch(`/api/materials/${materialId}`);
-        // const data = await response.json();
+    setIsLoading(true);
+    setError(null);
 
-        // Mock data for demo
-        const mockData = {
-          title: "Tài liệu mẫu",
-          format: "document" as MaterialFormat,
-          description: "Mô tả mẫu cho tài liệu",
-          type: "document" as ContentType,
-          status: "active" as ContentStatus,
-          allowAt: "",
-          dueDate: "",
-          allowedLate: false,
-        };
+    try {
+      // Fetch content detail
+      const contentRes = await api.get<ApiResponse<Content>>(
+        `/learning-management/contents/${materialId}`
+      );
 
-        setMaterial((prev) => ({
-          ...prev,
-          title: mockData.title,
-          format: mockData.format,
-          description: mockData.description,
-        }));
-
-        setContentMeta({
-          type: mockData.type,
-          status: mockData.status,
-          allowAt: mockData.allowAt,
-          dueDate: mockData.dueDate,
-          allowedLate: mockData.allowedLate,
-        });
-      } catch (error) {
-        console.error("Error fetching material:", error);
-      } finally {
-        setIsLoading(false);
+      if (!contentRes.data.success || !contentRes.data.data) {
+        throw new Error(
+          contentRes.data.message || "Không thể tải thông tin tài liệu"
+        );
       }
-    };
 
-    fetchMaterial();
+      const content = contentRes.data.data;
+      const format = mapApiTypeToFormat(content.type);
+
+      setMaterial({
+        title: content.title,
+        format,
+        description: content.description || "",
+        files: [],
+        link: "",
+      });
+
+      setContentMeta({
+        type:
+          format === "video"
+            ? "video"
+            : format === "slide"
+            ? "slide"
+            : format === "image"
+            ? "image"
+            : format === "reading"
+            ? "reading"
+            : "document",
+      });
+
+      // Fetch attachments
+      try {
+        const attachmentsRes = await api.get<ApiResponse<Attachment[]>>(
+          `/learning-management/contents/${materialId}/attachments`
+        );
+
+        if (attachmentsRes.data.success && attachmentsRes.data.data) {
+          setExistingAttachments(attachmentsRes.data.data);
+        }
+      } catch (err) {
+        // Silently fail for attachments - not critical
+        console.error("Failed to load attachments:", err);
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải thông tin tài liệu";
+      if (axios.isAxiosError(err)) {
+        errorMessage =
+          err.response?.data?.message || err.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   }, [materialId, navigate, courseId]);
 
+  useEffect(() => {
+    void fetchContentDetail();
+  }, [fetchContentDetail]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setMaterial((prev) => ({ ...prev, file: e.target.files![0] }));
+    if (e.target.files && e.target.files.length > 0) {
+      const newFiles = Array.from(e.target.files);
+      setMaterial((prev) => ({
+        ...prev,
+        files: [...prev.files, ...newFiles],
+      }));
     }
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setMaterial((prev) => ({
+      ...prev,
+      files: prev.files.filter((_, i) => i !== index),
+    }));
+  };
+
+  const handleRemoveExistingAttachment = (attachmentId: string) => {
+    setAttachmentsToDelete((prev) => [...prev, attachmentId]);
+    setExistingAttachments((prev) =>
+      prev.filter((att) => att.id !== attachmentId)
+    );
   };
 
   const mapFormatToContentType = (format: MaterialFormat): ContentType => {
@@ -117,38 +231,78 @@ const TeacherEditMaterial = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!material.title.trim() || !courseId) return;
+    if (!material.title.trim() || !materialId || !courseId) {
+      setError("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
 
     setIsSubmitting(true);
-
-    const payload = {
-      id: materialId,
-      title: material.title.trim(),
-      shortDescription: material.description.trim(),
-      format: material.format,
-      fileName: material.file?.name ?? null,
-      fileSize: material.file ? material.file.size : null,
-      link: material.format === "reading" ? material.description.trim() : null,
-      type: contentMeta.type,
-      status: contentMeta.status,
-      allowAt: contentMeta.allowAt || null,
-      dueDate: contentMeta.dueDate || null,
-      allowedLate: contentMeta.allowedLate,
-      courseInstanceId: courseId,
-    };
+    setError(null);
 
     try {
-      // Replace with actual API call
-      // await fetch(`/api/materials/${materialId}`, {
-      //   method: 'PUT',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(payload)
-      // });
+      // Update content
+      const contentRequest = {
+        title: material.title.trim(),
+        description: material.description.trim() || null,
+        type: mapContentTypeToEnum(contentMeta.type),
+        status: "PUBLISHED" as ApiContentStatus, // Keep existing status or use PUBLISHED
+      };
 
-      console.log("Material updated:", payload);
+      const contentResponse = await api.patch<ApiResponse<Content>>(
+        `/learning-management/contents/${materialId}`,
+        contentRequest
+      );
+
+      if (!contentResponse.data.success) {
+        throw new Error(
+          contentResponse.data.message || "Không thể cập nhật nội dung"
+        );
+      }
+
+      // Delete attachments that were marked for deletion
+      for (const attachmentId of attachmentsToDelete) {
+        try {
+          await api.delete(`/learning-management/attachments/${attachmentId}`);
+        } catch (err) {
+          console.error(`Failed to delete attachment ${attachmentId}:`, err);
+          // Continue with other deletions
+        }
+      }
+
+      // Upload new files
+      for (const file of material.files) {
+        if (material.format !== "reading") {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          try {
+            await api.post(
+              `/learning-management/contents/${materialId}/attachments`,
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data",
+                },
+              }
+            );
+          } catch (err) {
+            console.error(`Failed to upload file ${file.name}:`, err);
+            // Continue with other uploads
+          }
+        }
+      }
+
+      // Success - navigate back to course detail
       navigate(`/teacher/courses/${courseId}`);
-    } catch (error) {
-      console.error("Error updating material:", error);
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi cập nhật tài liệu";
+      if (axios.isAxiosError(err)) {
+        errorMessage =
+          err.response?.data?.message || err.message || errorMessage;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -156,8 +310,8 @@ const TeacherEditMaterial = () => {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-brand-500"></div>
+      <div className="rounded-2xl bg-white p-6 shadow-card">
+        <AdminLoading message="Đang tải thông tin tài liệu..." />
       </div>
     );
   }
@@ -169,31 +323,29 @@ const TeacherEditMaterial = () => {
         description="Cập nhật thông tin học liệu"
       />
 
+      <PageBreadcrumb pageTitle="Chỉnh sửa học liệu" />
+
       <div className="mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="mb-4 flex items-center text-sm font-medium text-gray-600 hover:text-brand-600"
-        >
-          <svg
-            className="mr-1 h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M10 19l-7-7m0 0l7-7m-7 7h18"
-            />
-          </svg>
-          Quay lại
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900">Chỉnh sửa học liệu</h1>
         <p className="text-gray-600">
-          Cập nhật thông tin học liệu để sinh viên truy cập
+          Cập nhật thông tin học liệu để sinh viên truy cập. Các thiết lập ở đây
+          sẽ dùng cho mục <strong>Tài liệu học tập</strong> và{" "}
+          <strong>chi tiết tài liệu</strong>.
         </p>
       </div>
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4">
+          <p className="text-sm font-medium text-red-800">{error}</p>
+        </div>
+      )}
+
+      {!materialId && (
+        <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
+          <p className="text-sm font-medium text-yellow-800">
+            Không tìm thấy materialId. Vui lòng quay lại trang khóa học.
+          </p>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-card">
         <form onSubmit={handleSubmit} className="space-y-8">
@@ -245,8 +397,13 @@ const TeacherEditMaterial = () => {
 
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">
-                Định dạng tệp <span className="text-red-500">*</span>
+                Định dạng tệp / Loại nội dung{" "}
+                <span className="text-red-500">*</span>
               </label>
+              <p className="mb-2 text-xs text-gray-500">
+                Loại nội dung sẽ được tự động xác định dựa trên định dạng bạn
+                chọn
+              </p>
               <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
                 {(Object.keys(materialLabels) as MaterialFormat[]).map(
                   (format) => (
@@ -268,7 +425,7 @@ const TeacherEditMaterial = () => {
                           setMaterial((prev) => ({
                             ...prev,
                             format,
-                            file: format === "reading" ? null : prev.file,
+                            files: format === "reading" ? [] : prev.files,
                             link: format === "reading" ? prev.link : "",
                           }));
                           setContentMeta((prev) => ({
@@ -283,6 +440,12 @@ const TeacherEditMaterial = () => {
                   )
                 )}
               </div>
+              <p className="mt-2 text-xs text-gray-500">
+                Loại nội dung hiện tại:{" "}
+                <span className="font-medium">
+                  {contentTypeLabels[contentMeta.type]}
+                </span>
+              </p>
             </div>
 
             {material.format === "reading" ? (
@@ -309,6 +472,106 @@ const TeacherEditMaterial = () => {
                 <label className="mb-1 block text-sm font-semibold text-gray-700">
                   Tệp đính kèm
                 </label>
+
+                {/* Existing attachments */}
+                {existingAttachments.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      Tệp đính kèm hiện có:
+                    </p>
+                    {existingAttachments.map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center justify-between rounded-lg bg-gray-50 p-3"
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="flex-shrink-0 rounded-md bg-gray-100 p-2">
+                            <svg
+                              className="h-5 w-5 text-gray-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </div>
+                          <div className="ml-3 flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {attachment.fileName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(attachment.fileSize)}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveExistingAttachment(attachment.id)
+                          }
+                          className="ml-2 flex-shrink-0 text-gray-400 hover:text-red-500"
+                        >
+                          <FiX size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* New files to upload */}
+                {material.files.length > 0 && (
+                  <div className="mb-3 space-y-2">
+                    <p className="text-xs font-medium text-gray-700">
+                      Tệp mới sẽ được thêm:
+                    </p>
+                    {material.files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between rounded-lg bg-blue-50 p-3"
+                      >
+                        <div className="flex items-center flex-1 min-w-0">
+                          <div className="flex-shrink-0 rounded-md bg-blue-100 p-2">
+                            <svg
+                              className="h-5 w-5 text-blue-400"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                            </svg>
+                          </div>
+                          <div className="ml-3 flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {file.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {formatFileSize(file.size)}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveFile(index)}
+                          className="ml-2 flex-shrink-0 text-gray-400 hover:text-red-500"
+                        >
+                          <FiX size={18} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* File upload area */}
                 <div className="mt-1 flex justify-center rounded-lg border-2 border-dashed border-gray-300 px-6 pt-5 pb-6">
                   <div className="space-y-1 text-center">
                     <svg
@@ -337,6 +600,7 @@ const TeacherEditMaterial = () => {
                           type="file"
                           className="sr-only"
                           onChange={handleFileChange}
+                          multiple
                           accept={
                             material.format === "document"
                               ? ".pdf,.doc,.docx,.txt"
@@ -361,187 +625,13 @@ const TeacherEditMaterial = () => {
                         ? "PPT, PPTX, ODP tối đa 20MB"
                         : material.format === "image"
                         ? "Ảnh (PNG, JPG, JPEG) tối đa 10MB"
-                        : ""}
+                        : ""}{" "}
+                      (Có thể chọn nhiều file)
                     </p>
                   </div>
                 </div>
-                {material.file && (
-                  <div className="mt-2 flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 rounded-md bg-gray-100 p-2">
-                        <svg
-                          className="h-5 w-5 text-gray-400"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                          />
-                        </svg>
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-sm font-medium text-gray-900">
-                          {material.file.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {(material.file.size / 1024 / 1024).toFixed(1)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setMaterial((prev) => ({ ...prev, file: null }))
-                      }
-                      className="text-gray-400 hover:text-gray-500"
-                    >
-                      <span className="sr-only">Xoá</span>
-                      <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-                )}
               </div>
             )}
-          </div>
-
-          {/* 3. Thiết lập metadata nội dung */}
-          <div className="space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">
-              Thiết lập metadata nội dung
-            </h2>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Loại nội dung
-                </label>
-                <select
-                  value={contentMeta.type}
-                  onChange={(e) =>
-                    setContentMeta((prev) => ({
-                      ...prev,
-                      type: e.target.value as ContentType,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                >
-                  {(Object.keys(contentTypeLabels) as ContentType[]).map(
-                    (t) => (
-                      <option key={t} value={t}>
-                        {contentTypeLabels[t]}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Trạng thái hiển thị
-                </label>
-                <select
-                  value={contentMeta.status}
-                  onChange={(e) =>
-                    setContentMeta((prev) => ({
-                      ...prev,
-                      status: e.target.value as ContentStatus,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                >
-                  {(Object.keys(contentStatusLabels) as ContentStatus[]).map(
-                    (s) => (
-                      <option key={s} value={s}>
-                        {contentStatusLabels[s]}
-                      </option>
-                    )
-                  )}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Thời điểm cho phép truy cập (allowAt)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={contentMeta.allowAt}
-                  onChange={(e) =>
-                    setContentMeta((prev) => ({
-                      ...prev,
-                      allowAt: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Để trống nếu muốn mở ngay khi cập nhật.
-                </p>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-gray-700">
-                  Hạn xem (dueDate)
-                </label>
-                <input
-                  type="datetime-local"
-                  value={contentMeta.dueDate}
-                  onChange={(e) =>
-                    setContentMeta((prev) => ({
-                      ...prev,
-                      dueDate: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Dùng cho LCM: sau hạn có thể tự ẩn hoặc cho phép xem trễ.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setContentMeta((prev) => ({
-                    ...prev,
-                    allowedLate: !prev.allowedLate,
-                  }))
-                }
-                className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
-                  contentMeta.allowedLate ? "bg-brand-600" : "bg-gray-200"
-                }`}
-                aria-pressed={contentMeta.allowedLate}
-              >
-                <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
-                    contentMeta.allowedLate ? "translate-x-4" : "translate-x-0"
-                  }`}
-                />
-              </button>
-              <span className="text-sm text-gray-700">
-                Cho phép sinh viên truy cập sau hạn (allowedLate)
-              </span>
-            </div>
           </div>
 
           <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4">
@@ -554,8 +644,13 @@ const TeacherEditMaterial = () => {
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !material.title.trim()}
-              className="rounded-lg border border-transparent bg-brand-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={
+                isSubmitting ||
+                !material.title.trim() ||
+                !materialId ||
+                !courseId
+              }
+              className="rounded-lg border border-transparent px-6 py-2.5 text-sm font-medium text-white shadow-sm bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
             </button>

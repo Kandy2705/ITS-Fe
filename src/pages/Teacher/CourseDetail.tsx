@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router";
-import { Link } from "react-router-dom";
 import axios from "axios";
 import api from "../../utils/api";
 import AdminLoading from "../../components/common/AdminLoading";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import type { ApiResponse } from "../../interfaces/api";
 import type { PageResponse } from "../../interfaces/pagination";
 import type { User as UserType } from "../../interfaces/user";
@@ -15,6 +15,7 @@ import {
   FiEye,
   FiTrash2,
   FiClock,
+  FiDownload,
 } from "react-icons/fi";
 
 // User role and status types
@@ -55,6 +56,49 @@ interface CourseInstance {
   status: CourseInstanceStatus;
 }
 
+// Content from API
+type ContentType =
+  | "DOCUMENT"
+  | "LECTURE"
+  | "VIDEO"
+  | "IMAGE"
+  | "LINK"
+  | "MATERIAL";
+type ContentStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED";
+type FileType =
+  | "PDF"
+  | "DOCUMENT"
+  | "SPREADSHEET"
+  | "PRESENTATION"
+  | "IMAGE"
+  | "VIDEO"
+  | "AUDIO"
+  | "ZIP"
+  | "OTHER";
+
+interface Content {
+  id: string;
+  courseInstanceId: string;
+  title: string;
+  description: string | null;
+  type: ContentType;
+  status: ContentStatus;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Attachment {
+  id: string;
+  ownerId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: FileType;
+  uploadedAt: string;
+}
+
+// Material type for display (mapped from Content)
 type MaterialType = "document" | "slide" | "video" | "image" | "reading";
 type MaterialStatus = "active" | "inactive" | "hidden";
 
@@ -77,118 +121,6 @@ interface LearningMaterial {
   lastUpdated?: string;
 }
 
-// Sample data: CHỈ tài liệu học tập, không assignment/quiz
-
-const learningMaterials: LearningMaterial[] = [
-  {
-    id: "1",
-    courseInstanceId: "ci-1",
-    title: "Bài giảng tuần 1 - Giới thiệu môn học",
-    description:
-      "Tổng quan về môn học, mục tiêu và cách tổ chức nội dung trong học kỳ.",
-    type: "slide",
-    status: "active",
-    orderIndex: 1,
-    dueDate: "2025-12-15T23:59:59Z", // hạn xem
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: true,
-    createdAt: "2025-11-25T10:00:00Z",
-    updatedAt: "2025-11-30T15:30:00Z",
-    studentsCompleted: 20,
-    totalStudents: 25,
-    viewCount: 45,
-  },
-  {
-    id: "2",
-    courseInstanceId: "ci-1",
-    title: "Tài liệu tóm tắt chương 1",
-    description:
-      "Tổng hợp các khái niệm cơ bản về kiến trúc phần mềm được trình bày trong chương 1.",
-    type: "document",
-    status: "active",
-    orderIndex: 2,
-    dueDate: null, // không giới hạn thời gian xem
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: true,
-    createdAt: "2025-11-26T09:00:00Z",
-    updatedAt: "2025-11-29T14:15:00Z",
-    studentsCompleted: 18,
-    totalStudents: 25,
-    viewCount: 32,
-  },
-  {
-    id: "3",
-    courseInstanceId: "ci-1",
-    title: "Tài liệu đọc thêm chương 1",
-    description:
-      "Bài đọc mở rộng về các mẫu kiến trúc phổ biến và ví dụ minh hoạ.",
-    type: "reading",
-    status: "active",
-    orderIndex: 3,
-    dueDate: null,
-    allowAt: "2025-12-01T00:00:00Z",
-    allowedLate: true,
-    createdAt: "2025-11-27T14:00:00Z",
-    updatedAt: "2025-11-28T10:20:00Z",
-    studentsCompleted: 15,
-    totalStudents: 25,
-    viewCount: 30,
-  },
-  {
-    id: "4",
-    courseInstanceId: "ci-1",
-    title: "Video minh hoạ case study",
-    description:
-      "Video trình bày case study áp dụng kiến trúc 3-layer trong hệ thống thực tế.",
-    type: "video",
-    status: "inactive",
-    orderIndex: 4,
-    dueDate: "2026-01-10T23:59:59Z",
-    allowAt: "2026-01-01T00:00:00Z",
-    allowedLate: false,
-    createdAt: "2025-11-28T10:00:00Z",
-    updatedAt: "2025-11-28T10:00:00Z",
-    studentsCompleted: 0,
-    totalStudents: 25,
-    viewCount: 0,
-  },
-];
-
-const comments = [
-  {
-    name: "Bạn",
-    role: "Giảng viên",
-    avatar: "B",
-    time: "5 phút trước",
-    text: "các bạn cố gắng hoàn thiện bài học nhé!",
-    isMe: true,
-  },
-  {
-    name: "Nguyễn Văn A",
-    role: "Sinh viên",
-    avatar: "A",
-    time: "2 giờ trước",
-    text: "Ai giải thích giúp mình phần 3.2 với ạ?",
-    isMe: false,
-  },
-  {
-    name: "Trần Thị B",
-    role: "Sinh viên",
-    avatar: "T",
-    time: "3 giờ trước",
-    text: "Tôi cũng đang thắc mắc phần đó. @Nguyễn Văn A chúng ta có thể thảo luận thêm không?",
-    isMe: false,
-  },
-  {
-    name: "ITS Bot",
-    role: "Hỗ trợ AI",
-    avatar: "AI",
-    time: "Hôm qua",
-    text: "Dựa trên tiến độ của bạn, tôi đề xuất xem kỹ phần 2.3 và làm bài tập liên quan để hiểu sâu hơn.",
-    isMe: false,
-  },
-];
-
 const TeacherCourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -196,12 +128,23 @@ const TeacherCourseDetail = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<
-    "materials" | "students" | "discussions"
-  >("materials");
-  const [newComment, setNewComment] = useState("");
-  const [isLiked, setIsLiked] = useState<boolean>(false);
+  const [activeTab, setActiveTab] = useState<"materials" | "students">(
+    "materials"
+  );
   const [materialToDelete, setMaterialToDelete] = useState<string | null>(null);
+
+  // Contents state
+  const [contents, setContents] = useState<Content[]>([]);
+  const [contentsLoading, setContentsLoading] = useState(false);
+  const [contentsError, setContentsError] = useState<string | null>(null);
+
+  // Attachments state - map contentId to attachments
+  const [attachmentsMap, setAttachmentsMap] = useState<
+    Record<string, Attachment[]>
+  >({});
+  const [attachmentsLoading, setAttachmentsLoading] = useState<
+    Record<string, boolean>
+  >({});
 
   // Course instance state
   const [courseInstance, setCourseInstance] = useState<CourseInstance | null>(
@@ -221,9 +164,46 @@ const TeacherCourseDetail = () => {
   const [totalStudents, setTotalStudents] = useState(0);
   const pageSize = 10;
 
+  // Map Content from API to LearningMaterial for display
+  const mapContentToMaterial = (content: Content): LearningMaterial => {
+    // Map ContentType to MaterialType
+    const typeMap: Record<ContentType, MaterialType> = {
+      DOCUMENT: "document",
+      LECTURE: "slide",
+      VIDEO: "video",
+      IMAGE: "image",
+      LINK: "reading",
+      MATERIAL: "document",
+    };
+
+    // Map ContentStatus to MaterialStatus
+    const statusMap: Record<ContentStatus, MaterialStatus> = {
+      PUBLISHED: "active",
+      DRAFT: "inactive",
+      ARCHIVED: "hidden",
+    };
+
+    return {
+      id: content.id,
+      courseInstanceId: content.courseInstanceId,
+      title: content.title,
+      description: content.description || "",
+      type: typeMap[content.type] || "document",
+      status: statusMap[content.status] || "inactive",
+      orderIndex: content.orderIndex,
+      dueDate: null, // API doesn't provide this
+      allowAt: content.createdAt,
+      allowedLate: true, // Default value
+      createdAt: content.createdAt,
+      updatedAt: content.updatedAt,
+    };
+  };
+
   // Filter + sort
   const filteredAndSortedMaterials = useMemo(() => {
-    let result = [...learningMaterials];
+    // Map contents to materials
+    const materials = contents.map(mapContentToMaterial);
+    let result = [...materials];
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -244,7 +224,7 @@ const TeacherCourseDetail = () => {
     });
 
     return result;
-  }, [searchQuery, sortBy]);
+  }, [searchQuery, sortBy, contents]);
 
   const getStatusLabel = (status: MaterialStatus): string => {
     const statusMap: Record<MaterialStatus, string> = {
@@ -264,14 +244,6 @@ const TeacherCourseDetail = () => {
       reading: "Bài đọc",
     };
     return typeMap[type] || "Tài liệu học tập";
-  };
-
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newComment.trim()) {
-      console.log("New comment:", newComment);
-      setNewComment("");
-    }
   };
 
   const handleDeleteMaterial = (id: string) => {
@@ -345,6 +317,87 @@ const TeacherCourseDetail = () => {
       console.error("Error fetching total students:", err);
     }
   }, [id]);
+
+  // Fetch attachments for a content
+  const fetchAttachments = useCallback(async (contentId: string) => {
+    setAttachmentsLoading((prev) => ({ ...prev, [contentId]: true }));
+
+    try {
+      const res = await api.get<ApiResponse<Attachment[]>>(
+        `/learning-management/contents/${contentId}/attachments`
+      );
+
+      if (res.data.success && res.data.data) {
+        setAttachmentsMap((prev) => ({
+          ...prev,
+          [contentId]: res.data.data || [],
+        }));
+      }
+    } catch (err: unknown) {
+      // Silently fail for attachments - not critical
+      console.error(
+        `Failed to load attachments for content ${contentId}:`,
+        err
+      );
+      setAttachmentsMap((prev) => ({
+        ...prev,
+        [contentId]: [],
+      }));
+    } finally {
+      setAttachmentsLoading((prev) => ({ ...prev, [contentId]: false }));
+    }
+  }, []);
+
+  // Fetch contents from API
+  const fetchContents = useCallback(async () => {
+    if (!id) return;
+
+    setContentsLoading(true);
+    setContentsError(null);
+
+    try {
+      const res = await api.get<ApiResponse<PageResponse<Content>>>(
+        "/learning-management/contents",
+        {
+          params: {
+            courseInstanceId: id,
+            page: 0,
+            size: 100, // Get all contents
+            sort: "orderIndex",
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        const apiContents = res.data.data.content || [];
+        setContents(apiContents);
+
+        // Fetch attachments for each content
+        apiContents.forEach((content) => {
+          void fetchAttachments(content.id);
+        });
+      } else {
+        setContentsError(
+          res.data.message || "Không thể tải danh sách tài liệu"
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải danh sách tài liệu";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setContentsError(errorMessage);
+    } finally {
+      setContentsLoading(false);
+    }
+  }, [id, fetchAttachments]);
 
   // Fetch students from API
   const fetchStudents = useCallback(async () => {
@@ -430,6 +483,13 @@ const TeacherCourseDetail = () => {
     }
   }, [id, fetchTotalStudents]);
 
+  // Fetch contents when component mounts or when id changes
+  useEffect(() => {
+    if (id) {
+      void fetchContents();
+    }
+  }, [id, fetchContents]);
+
   // Fetch students when tab changes to students or when page changes
   useEffect(() => {
     if (activeTab === "students" && id) {
@@ -437,16 +497,29 @@ const TeacherCourseDetail = () => {
     }
   }, [activeTab, id, fetchStudents]);
 
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
+
   const renderMaterialItem = (material: LearningMaterial) => {
+    const attachments = attachmentsMap[material.id] || [];
+    const isLoadingAttachments = attachmentsLoading[material.id];
+
     return (
       <div
         key={material.id}
         className="border  bg-white rounded-lg p-4 mb-4 hover:shadow-md transition-shadow"
       >
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex-1">
             <h3 className="font-medium text-gray-900">{material.title}</h3>
-            <p className="text-sm text-gray-600 mt-1">{material.description}</p>
+            <p className="text-base text-gray-600 mt-1">
+              {material.description}
+            </p>
             <div className="mt-2 flex items-center text-xs text-gray-500 space-x-4">
               <span className="px-2 py-1 bg-gray-100 rounded-full">
                 {getMaterialTypeLabel(material.type)}
@@ -462,8 +535,38 @@ const TeacherCourseDetail = () => {
                 </span>
               )}
             </div>
+
+            {/* Tệp đính kèm */}
+            {isLoadingAttachments ? (
+              <div className="mt-3 text-sm text-gray-500">
+                Đang tải tệp đính kèm...
+              </div>
+            ) : attachments.length > 0 ? (
+              <div className="mt-3 space-y-2">
+                <div className="text-sm font-medium text-gray-700">
+                  Tệp đính kèm:
+                </div>
+                <div className="space-y-1">
+                  {attachments.map((attachment) => (
+                    <a
+                      key={attachment.id}
+                      href={attachment.fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      <FiDownload size={14} />
+                      <span>{attachment.fileName}</span>
+                      <span className="text-gray-500 text-xs">
+                        ({formatFileSize(attachment.fileSize)})
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center ml-4">
             <div className="text-right">
               <div className="text-sm font-medium">
                 {material.studentsCompleted || 0}/{material.totalStudents} đã
@@ -515,17 +618,11 @@ const TeacherCourseDetail = () => {
   const courseTitle = courseInstance?.course?.title || "Đang tải...";
   const courseCode = courseInstance?.course?.code;
   const courseId = id || "";
-  const totalMaterials = learningMaterials.length;
+  const totalMaterials = contents.length;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="mb-4 flex items-center text-sm text-gray-600">
-        <Link to="/teacher/courses" className="hover:text-brand-600">
-          Khóa học của tôi
-        </Link>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900">{courseTitle}</span>
-      </div>
+      <PageBreadcrumb pageTitle={courseTitle} />
       <div className="bg-white shadow">
         {courseInstanceError && (
           <div className="mx-4 mt-4 rounded-md bg-red-50 p-4">
@@ -583,7 +680,7 @@ const TeacherCourseDetail = () => {
                 <button
                   type="button"
                   className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  onClick={() => navigate("/teacher/content/upload")}
+                  onClick={() => navigate(`/teacher/courses/${id}/upload`)}
                 >
                   <FiPlus className="-ml-1 mr-2 h-5 w-5" />
                   Thêm tài liệu
@@ -618,16 +715,6 @@ const TeacherCourseDetail = () => {
               }`}
             >
               Học viên
-            </button>
-            <button
-              onClick={() => setActiveTab("discussions")}
-              className={`whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm ${
-                activeTab === "discussions"
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              Diễn đàn
             </button>
           </nav>
         </div>
@@ -703,7 +790,17 @@ const TeacherCourseDetail = () => {
         <div className="mt-6">
           {activeTab === "materials" && (
             <div className="space-y-4">
-              {filteredAndSortedMaterials.length > 0 ? (
+              {contentsLoading ? (
+                <div className="py-12">
+                  <AdminLoading message="Đang tải danh sách tài liệu..." />
+                </div>
+              ) : contentsError ? (
+                <div className="rounded-lg border border-red-300 bg-red-50 p-4">
+                  <p className="text-sm font-medium text-red-800">
+                    {contentsError}
+                  </p>
+                </div>
+              ) : filteredAndSortedMaterials.length > 0 ? (
                 <div>
                   <ul className="divide-y divide-gray-200">
                     {filteredAndSortedMaterials.map((material) => (
@@ -723,6 +820,7 @@ const TeacherCourseDetail = () => {
                   <div className="mt-6">
                     <button
                       type="button"
+                      onClick={() => navigate(`/teacher/courses/${id}/upload`)}
                       className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                     >
                       <FiPlus className="-ml-1 mr-2 h-5 w-5" />
@@ -919,133 +1017,6 @@ const TeacherCourseDetail = () => {
                     )}
                   </>
                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "discussions" && (
-            <div className="rounded-2xl bg-white p-6 shadow-card">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Diễn đàn
-                </h3>
-              </div>
-
-              <form onSubmit={handleCommentSubmit} className="mt-4">
-                <div className="flex items-start gap-3">
-                  <div className="mt-1 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-brand-100 font-semibold text-brand-700">
-                    B
-                  </div>
-                  <div className="flex-1">
-                    <textarea
-                      rows={3}
-                      className="w-full rounded-lg border border-gray-300 p-3 text-sm text-gray-900 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-                      placeholder="Đặt câu hỏi hoặc bình luận về tài liệu này..."
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                    />
-                    <div className="mt-2 flex items-center justify-between">
-                      <div className="flex gap-2"></div>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-brand-600 px-12 py-2 text-sm font-semibold text-white transition hover:bg-brand-700 disabled:opacity-50"
-                        disabled={!newComment.trim()}
-                      >
-                        Đăng
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </form>
-
-              <div className="mt-6 space-y-4">
-                {comments.map((comment, index) => (
-                  <div
-                    key={index}
-                    className={`rounded-xl border p-4 ${
-                      comment.isMe
-                        ? "border-brand-200 bg-brand-50"
-                        : "border-gray-200"
-                    }`}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div
-                        className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-semibold ${
-                          comment.isMe
-                            ? "bg-brand-100 text-brand-700"
-                            : "bg-gray-100 text-gray-700"
-                        }`}
-                      >
-                        {comment.avatar}
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {comment.name}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {comment.role} • {comment.time}
-                            </p>
-                          </div>
-                          {comment.isMe && (
-                            <span className="inline-flex items-center rounded-full bg-brand-100 px-2.5 py-0.5 text-xs font-medium text-brand-800">
-                              Bạn
-                            </span>
-                          )}
-                        </div>
-                        <p className="mt-2 text-gray-700">{comment.text}</p>
-                        <div className="mt-3 flex items-center gap-2 text-sm text-gray-500">
-                          <button
-                            className="flex items-center gap-1 rounded-full px-2 py-1 hover:bg-gray-100"
-                            onClick={() => setIsLiked(!isLiked)}
-                          >
-                            <svg
-                              className={`h-4 w-4 ${
-                                isLiked ? "text-brand-600 fill-current" : ""
-                              }`}
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d={
-                                  isLiked
-                                    ? "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                                    : "M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"
-                                }
-                              />
-                            </svg>
-                            <span>{isLiked ? "Đã thích" : "Thích"}</span>
-                          </button>
-                          <button className="rounded-full px-2 py-1 hover:bg-gray-100">
-                            Trả lời
-                          </button>
-                          {!comment.isMe && (
-                            <button className="ml-auto rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-500">
-                              <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={1.5}
-                                  d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
-                                />
-                              </svg>
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
               </div>
             </div>
           )}

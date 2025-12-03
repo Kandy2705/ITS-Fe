@@ -12,12 +12,12 @@ import type { User } from "../../interfaces/user";
 const PAGE_SIZE = 6; // 6 courses per page for grid layout
 
 type SortOption =
-  | "progress-asc"
-  | "progress-desc"
   | "code-asc"
   | "code-desc"
   | "title-asc"
-  | "title-desc";
+  | "title-desc"
+  | "status-asc"
+  | "status-desc";
 
 type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
 
@@ -41,9 +41,7 @@ interface CourseDisplay {
   id: string;
   courseCode: string;
   title: string;
-  progress: number;
   credits: number;
-  students: number;
   status: CourseInstanceStatus;
 }
 
@@ -106,15 +104,11 @@ const TeacherCourses = () => {
           const instances = pageResponse.content || [];
 
           // Map API response to display format
-          // Note: Progress and student count might need to be fetched separately
-          // For now, we'll use placeholder values
           const mappedCourses: CourseDisplay[] = instances.map((instance) => ({
             id: instance.id,
             courseCode: instance.course.code || "N/A",
             title: instance.course.title,
-            progress: 0, // TODO: Calculate actual progress from student data
             credits: parseInt(instance.course.credit || "0", 10) || 0,
-            students: 0, // TODO: Fetch actual student count
             status: instance.status,
           }));
 
@@ -163,8 +157,7 @@ const TeacherCourses = () => {
     }
   };
 
-  // Note: Filtering and sorting is now done on the client side for the current page
-  // If you want server-side filtering/sorting, you'll need to pass these as API params
+  // Filtering and sorting is done on the client side for the current page
   const filteredAndSortedCourses = useMemo(() => {
     let result = [...courses];
 
@@ -181,10 +174,6 @@ const TeacherCourses = () => {
     // Sort courses (client-side for current page)
     result.sort((a, b) => {
       switch (sortBy) {
-        case "progress-asc":
-          return a.progress - b.progress;
-        case "progress-desc":
-          return b.progress - a.progress;
         case "code-asc":
           return a.courseCode.localeCompare(b.courseCode);
         case "code-desc":
@@ -193,6 +182,10 @@ const TeacherCourses = () => {
           return a.title.localeCompare(b.title);
         case "title-desc":
           return b.title.localeCompare(a.title);
+        case "status-asc":
+          return a.status.localeCompare(b.status);
+        case "status-desc":
+          return b.status.localeCompare(a.status);
         default:
           return 0;
       }
@@ -203,18 +196,18 @@ const TeacherCourses = () => {
 
   const getSortLabel = (): string => {
     const sortLabels: Record<SortOption, string> = {
-      "progress-asc": "Tiến độ (tăng dần)",
-      "progress-desc": "Tiến độ (giảm dần)",
       "code-asc": "Mã môn (A-Z)",
       "code-desc": "Mã môn (Z-A)",
       "title-asc": "Tên môn (A-Z)",
       "title-desc": "Tên môn (Z-A)",
+      "status-asc": "Trạng thái (A-Z)",
+      "status-desc": "Trạng thái (Z-A)",
     };
     return sortLabels[sortBy];
   };
 
   const getStatusLabel = (status: CourseInstanceStatus): string => {
-    return status === "ACTIVE" ? "Đang hoạt động" : "Ngừng hoạt động";
+    return status === "ACTIVE" ? "Đang hoạt động" : "Không hoạt động";
   };
 
   const getStatusColor = (status: CourseInstanceStatus): string => {
@@ -280,8 +273,8 @@ const TeacherCourses = () => {
                   { value: "title-desc", label: "Tên môn (Z-A)" },
                   { value: "code-asc", label: "Mã môn (A-Z)" },
                   { value: "code-desc", label: "Mã môn (Z-A)" },
-                  { value: "progress-desc", label: "Tiến độ (cao nhất)" },
-                  { value: "progress-asc", label: "Tiến độ (thấp nhất)" },
+                  { value: "status-asc", label: "Trạng thái (A-Z)" },
+                  { value: "status-desc", label: "Trạng thái (Z-A)" },
                 ].map((option) => (
                   <button
                     key={option.value}
@@ -312,7 +305,9 @@ const TeacherCourses = () => {
               Không tìm thấy khóa học
             </h3>
             <p className="mt-1 text-sm text-gray-500">
-              Thử thay đổi từ khoá tìm kiếm
+              {searchQuery
+                ? "Thử thay đổi từ khoá tìm kiếm"
+                : "Bạn chưa có khóa học nào"}
             </p>
           </div>
         ) : (
@@ -337,8 +332,6 @@ const TeacherCourses = () => {
                     </Link>
                   </div>
                   <div className="mt-1 flex items-center gap-4 text-sm text-gray-600">
-                    <span>{course.students} học viên</span>
-                    <span className="text-gray-400">•</span>
                     <span>{course.credits} tín chỉ</span>
                   </div>
                 </div>
@@ -353,27 +346,12 @@ const TeacherCourses = () => {
                 </div>
               </div>
 
-              {course.progress > 0 && (
-                <div className="rounded-xl bg-gray-50 p-4">
-                  <div className="flex items-center justify-between text-sm text-gray-700">
-                    <span>Tiến độ xem bài</span>
-                    <span className="font-semibold">{course.progress}%</span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="h-full rounded-full bg-brand-500"
-                      style={{ width: `${course.progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
               <div className="grid gap-2 text-sm md:grid-cols-2 lg:grid-cols-1">
                 <Link
                   to={`/teacher/courses/${course.id}`}
-                  className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold bg-brand-600 text-white transition hover:bg-brand-700"
+                  className="flex items-center justify-center rounded-lg border border-gray-200 px-3 py-2 font-semibold bg-blue-600 text-white transition hover:border-brand-400 hover:bg-blue-700"
                 >
-                  Quản lý khóa học
+                  Xem chi tiết
                 </Link>
               </div>
             </div>

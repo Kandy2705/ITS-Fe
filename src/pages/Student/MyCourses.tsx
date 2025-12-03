@@ -5,19 +5,14 @@ import axios from "axios";
 import api from "../../utils/api";
 import AdminLoading from "../../components/common/AdminLoading";
 import AdminPagination from "../../components/common/AdminPagination";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 import type { ApiResponse } from "../../interfaces/api";
 import type { PageResponse } from "../../interfaces/pagination";
 import type { User } from "../../interfaces/user";
 
 const PAGE_SIZE = 6; // 6 courses per page for grid layout
 
-type SortOption =
-  | "progress-asc"
-  | "progress-desc"
-  | "code-asc"
-  | "code-desc"
-  | "title-asc"
-  | "title-desc";
+type SortOption = "code-asc" | "code-desc" | "title-asc" | "title-desc";
 
 type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
 
@@ -178,10 +173,6 @@ const StudentCourses = () => {
     // Sort courses (client-side for current page)
     result.sort((a, b) => {
       switch (sortBy) {
-        case "progress-asc":
-          return a.progress - b.progress;
-        case "progress-desc":
-          return b.progress - a.progress;
         case "code-asc":
           return a.courseCode.localeCompare(b.courseCode);
         case "code-desc":
@@ -200,8 +191,6 @@ const StudentCourses = () => {
 
   const getSortLabel = (): string => {
     const sortLabels: Record<SortOption, string> = {
-      "progress-asc": "Tiến độ (tăng dần)",
-      "progress-desc": "Tiến độ (giảm dần)",
       "code-asc": "Mã môn (A-Z)",
       "code-desc": "Mã môn (Z-A)",
       "title-asc": "Tên môn (A-Z)",
@@ -232,6 +221,7 @@ const StudentCourses = () => {
 
   return (
     <>
+      <PageBreadcrumb pageTitle="Khóa học của tôi" />
       <div className="space-y-4">
         {/* Search and Sort Bar */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -268,8 +258,6 @@ const StudentCourses = () => {
                     { value: "title-desc", label: "Tên môn (Z-A)" },
                     { value: "code-asc", label: "Mã môn (A-Z)" },
                     { value: "code-desc", label: "Mã môn (Z-A)" },
-                    { value: "progress-desc", label: "Tiến độ (cao nhất)" },
-                    { value: "progress-asc", label: "Tiến độ (thấp nhất)" },
                   ].map((option) => (
                     <button
                       key={option.value}
@@ -334,19 +322,6 @@ const StudentCourses = () => {
                     <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-500">
                       Đang hoạt động
                     </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl bg-gray-50 p-4">
-                  <div className="flex items-center justify-between text-sm text-gray-700">
-                    <span>Tiến độ học tập</span>
-                    <span className="font-semibold">{course.progress}%</span>
-                  </div>
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
-                    <div
-                      className="h-full rounded-full bg-brand-500"
-                      style={{ width: `${course.progress}%` }}
-                    />
                   </div>
                 </div>
 

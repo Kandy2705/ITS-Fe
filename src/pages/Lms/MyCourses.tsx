@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import PageMeta from "../../components/common/PageMeta";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
 
 const mockCourses = [
   {
@@ -56,6 +57,7 @@ const MyCourses = () => {
         title="Khoá học của tôi"
         description="Tổng hợp khoá học cho sinh viên và giảng viên với tiến độ và hành động nhanh"
       />
+      <PageBreadcrumb pageTitle="Khóa học của tôi" />
       <div className="space-y-4">
         <div className="flex flex-col gap-3 rounded-2xl bg-white p-6 shadow-card md:flex-row md:items-center md:justify-between">
           <div>
