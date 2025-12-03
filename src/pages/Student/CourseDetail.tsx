@@ -476,7 +476,7 @@ const StudentCourseDetail = () => {
                         }}
                         style={{ cursor: isLocked ? "not-allowed" : "pointer" }}
                       >
-                        <span
+                        {/* <span
                           className={`mt-1 flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${
                             material.status === "active"
                               ? "bg-brand-600"
@@ -484,7 +484,7 @@ const StudentCourseDetail = () => {
                           }`}
                         >
                           {material.orderIndex + 1}
-                        </span>
+                        </span> */}
 
                         <div className="flex-1">
                           <div className="flex items-start justify-between">
