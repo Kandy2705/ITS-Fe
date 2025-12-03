@@ -13,6 +13,28 @@ import {
   FiChevronUp,
 } from "react-icons/fi";
 
+// Course Instance interfaces
+type CourseInstanceStatus = "ACTIVE" | "INACTIVE";
+
+interface Course {
+  id: string;
+  title: string;
+  code: string | null;
+  description?: string | null;
+  credit?: string | null;
+}
+
+interface CourseInstance {
+  id: string;
+  course: Course;
+  teacher: {
+    id: string;
+    firstName: string;
+    lastName: string;
+  };
+  status: CourseInstanceStatus;
+}
+
 // Content from API
 type ApiContentType =
   | "DOCUMENT"
@@ -63,6 +85,15 @@ const StudentCourseDetail = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("newest");
   const [isSortOpen, setIsSortOpen] = useState(false);
+
+  // Course instance state
+  const [courseInstance, setCourseInstance] = useState<CourseInstance | null>(
+    null
+  );
+  const [courseInstanceLoading, setCourseInstanceLoading] = useState(false);
+  const [courseInstanceError, setCourseInstanceError] = useState<string | null>(
+    null
+  );
 
   // Contents state
   const [contents, setContents] = useState<Content[]>([]);
@@ -151,10 +182,53 @@ const StudentCourseDetail = () => {
     }
   }, [id]);
 
-  // Fetch contents on mount
+  // Fetch course instance from API
+  const fetchCourseInstance = useCallback(async () => {
+    if (!id) return;
+
+    setCourseInstanceLoading(true);
+    setCourseInstanceError(null);
+
+    try {
+      const res = await api.get<ApiResponse<CourseInstance>>(
+        "/learning-management/courses-instance/getDetails",
+        {
+          params: {
+            courseInstanceId: id,
+          },
+        }
+      );
+
+      if (res.data.success && res.data.data) {
+        setCourseInstance(res.data.data);
+      } else {
+        setCourseInstanceError(
+          res.data.message || "Không thể tải thông tin khóa học"
+        );
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi tải thông tin khóa học";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setCourseInstanceError(errorMessage);
+    } finally {
+      setCourseInstanceLoading(false);
+    }
+  }, [id]);
+
+  // Fetch course instance and contents on mount
   useEffect(() => {
+    void fetchCourseInstance();
     void fetchContents();
-  }, [fetchContents]);
+  }, [fetchCourseInstance, fetchContents]);
 
   const filteredAndSortedMaterials = useMemo(() => {
     // Map contents to materials
@@ -220,35 +294,68 @@ const StudentCourseDetail = () => {
 
       <div className="space-y-4">
         <div className="rounded-2xl bg-white p-6 shadow-card">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
-                  CS101
-                </span>
-                <span className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
-                  3 tín chỉ
-                </span>
-              </div>
-              <h1 className="mt-2 text-2xl font-semibold text-gray-900">
-                Nhập môn điện toán
-              </h1>
-              <p className="mt-1 text-sm text-gray-600">
-                Khóa học này giúp các bạn nắm vững kiến thức cơ bản về điện toán
-              </p>
-              <p className="mt-1 text-sm text-gray-600">
-                Giáo viên: TS. Nguyễn Văn A
+          {courseInstanceError && (
+            <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-4">
+              <p className="text-sm font-medium text-red-800">
+                {courseInstanceError}
               </p>
             </div>
-            <div className="mt-4 flex items-center gap-3 md:mt-0">
-              <div className="rounded-lg bg-gray-50 p-3 text-center">
-                <p className="text-xs font-medium text-gray-500">Trạng thái</p>
-                <p className="text-sm font-semibold text-green-600">
-                  Đang hoạt động
+          )}
+          {courseInstanceLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-brand-600"></div>
+              <p className="ml-3 text-sm text-gray-600">
+                Đang tải thông tin khóa học...
+              </p>
+            </div>
+          ) : courseInstance ? (
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="flex items-center gap-2">
+                  {courseInstance.course.code && (
+                    <span className="rounded-md bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                      {courseInstance.course.code}
+                    </span>
+                  )}
+                  {courseInstance.course.credit && (
+                    <span className="rounded-md bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                      {courseInstance.course.credit} tín chỉ
+                    </span>
+                  )}
+                </div>
+                <h1 className="mt-2 text-2xl font-semibold text-gray-900">
+                  {courseInstance.course.title}
+                </h1>
+                {courseInstance.course.description && (
+                  <p className="mt-1 text-sm text-gray-600">
+                    {courseInstance.course.description}
+                  </p>
+                )}
+                <p className="mt-1 text-sm text-gray-600">
+                  Giáo viên: {courseInstance.teacher.firstName}{" "}
+                  {courseInstance.teacher.lastName}
                 </p>
               </div>
+              <div className="mt-4 flex items-center gap-3 md:mt-0">
+                <div className="rounded-lg bg-gray-50 p-3 text-center">
+                  <p className="text-xs font-medium text-gray-500">
+                    Trạng thái
+                  </p>
+                  <p
+                    className={`text-sm font-semibold ${
+                      courseInstance.status === "ACTIVE"
+                        ? "text-green-600"
+                        : "text-gray-600"
+                    }`}
+                  >
+                    {courseInstance.status === "ACTIVE"
+                      ? "Đang hoạt động"
+                      : "Đã lưu trữ"}
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
 
         <div className="grid">
