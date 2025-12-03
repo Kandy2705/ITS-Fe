@@ -39,6 +39,7 @@ interface CourseDisplay {
   instructor: string;
   progress: number;
   credits: number;
+  status: CourseInstanceStatus;
 }
 
 const StudentCourses = () => {
@@ -107,6 +108,7 @@ const StudentCourses = () => {
             instructor: `${instance.teacher.firstName} ${instance.teacher.lastName}`,
             progress: 0, // TODO: Calculate actual progress from student data
             credits: parseInt(instance.course.credit || "0", 10) || 0,
+            status: instance.status,
           }));
 
           setCourses(mappedCourses);
@@ -197,6 +199,22 @@ const StudentCourses = () => {
       "title-desc": "Tên môn (Z-A)",
     };
     return sortLabels[sortBy];
+  };
+
+  const getStatusDisplay = (status: CourseInstanceStatus) => {
+    if (status === "ACTIVE") {
+      return {
+        label: "Đang hoạt động",
+        bgColor: "bg-green-100",
+        textColor: "text-green-500",
+      };
+    } else {
+      return {
+        label: "Đã lưu trữ",
+        bgColor: "bg-gray-100",
+        textColor: "text-gray-500",
+      };
+    }
   };
 
   if (loading) {
@@ -319,9 +337,16 @@ const StudentCourses = () => {
                     </div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <div className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-500">
-                      Đang hoạt động
-                    </div>
+                    {(() => {
+                      const statusDisplay = getStatusDisplay(course.status);
+                      return (
+                        <div
+                          className={`rounded-full px-3 py-1 text-xs font-semibold ${statusDisplay.bgColor} ${statusDisplay.textColor}`}
+                        >
+                          {statusDisplay.label}
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 

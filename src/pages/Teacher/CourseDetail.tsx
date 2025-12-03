@@ -247,6 +247,22 @@ const TeacherCourseDetail = () => {
     return typeMap[type] || "Tài liệu học tập";
   };
 
+  const getCourseInstanceStatusDisplay = (status: CourseInstanceStatus) => {
+    if (status === "ACTIVE") {
+      return {
+        label: "Đang hoạt động",
+        bgColor: "bg-green-100",
+        textColor: "text-green-500",
+      };
+    } else {
+      return {
+        label: "Đã lưu trữ",
+        bgColor: "bg-gray-100",
+        textColor: "text-gray-500",
+      };
+    }
+  };
+
   const handleDeleteMaterial = async (contentId: string) => {
     if (!id) return;
 
@@ -555,6 +571,9 @@ const TeacherCourseDetail = () => {
     return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
   };
 
+  // Check if course instance is inactive
+  const isInactive = courseInstance?.status === "INACTIVE";
+
   const renderMaterialItem = (material: LearningMaterial) => {
     const attachments = attachmentsMap[material.id] || [];
     const isLoadingAttachments = attachmentsLoading[material.id];
@@ -631,15 +650,31 @@ const TeacherCourseDetail = () => {
             {new Date(material.updatedAt).toLocaleDateString("vi-VN")}
           </div>
           <div className="space-x-2">
-            <button
-              onClick={() =>
-                navigate(`/teacher/courses/${id}/materials/${material.id}/edit`)
-              }
-              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
-            >
-              <FiEdit2 className="inline mr-1" size={14} />
-              Chỉnh sửa
-            </button>
+            {!isInactive && (
+              <>
+                <button
+                  onClick={() =>
+                    navigate(
+                      `/teacher/courses/${id}/materials/${material.id}/edit`
+                    )
+                  }
+                  className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                >
+                  <FiEdit2 className="inline mr-1" size={14} />
+                  Chỉnh sửa
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMaterialToDelete(material.id);
+                  }}
+                  className="px-3 py-1.5 text-sm font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50"
+                >
+                  <FiTrash2 className="inline mr-1" size={14} />
+                  Xóa
+                </button>
+              </>
+            )}
             <button
               onClick={() =>
                 navigate(`/teacher/courses/${id}/materials/${material.id}`)
@@ -648,16 +683,6 @@ const TeacherCourseDetail = () => {
             >
               <FiEye className="inline mr-1" size={14} />
               Xem
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setMaterialToDelete(material.id);
-              }}
-              className="px-3 py-1.5 text-sm font-medium text-red-600 border border-red-300 rounded-md hover:bg-red-50"
-            >
-              <FiTrash2 className="inline mr-1" size={14} />
-              Xóa
             </button>
           </div>
         </div>
@@ -696,6 +721,22 @@ const TeacherCourseDetail = () => {
                       {courseInstance.course.credit} tín chỉ
                     </span>
                   )}
+                  {courseInstance?.status && (
+                    <span
+                      className={`rounded-md px-2 py-1 text-xs font-medium ${
+                        getCourseInstanceStatusDisplay(courseInstance.status)
+                          .bgColor
+                      } ${
+                        getCourseInstanceStatusDisplay(courseInstance.status)
+                          .textColor
+                      }`}
+                    >
+                      {
+                        getCourseInstanceStatusDisplay(courseInstance.status)
+                          .label
+                      }
+                    </span>
+                  )}
                 </div>
 
                 <h1 className="mt-2 text-2xl font-semibold text-gray-900">
@@ -727,14 +768,16 @@ const TeacherCourseDetail = () => {
                 </div>
               </div>
               <div className="mt-4 flex-shrink-0 flex md:mt-0 md:ml-4">
-                <button
-                  type="button"
-                  className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  onClick={() => navigate(`/teacher/courses/${id}/upload`)}
-                >
-                  <FiPlus className="-ml-1 mr-2 h-5 w-5" />
-                  Thêm tài liệu
-                </button>
+                {!isInactive && (
+                  <button
+                    type="button"
+                    className="ml-3 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => navigate(`/teacher/courses/${id}/upload`)}
+                  >
+                    <FiPlus className="-ml-1 mr-2 h-5 w-5" />
+                    Thêm tài liệu
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -867,16 +910,20 @@ const TeacherCourseDetail = () => {
                   <p className="mt-1 text-sm text-gray-500">
                     Chưa có tài liệu nào được thêm vào khoá học này.
                   </p>
-                  <div className="mt-6">
-                    <button
-                      type="button"
-                      onClick={() => navigate(`/teacher/courses/${id}/upload`)}
-                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                    >
-                      <FiPlus className="-ml-1 mr-2 h-5 w-5" />
-                      Thêm tài liệu mới
-                    </button>
-                  </div>
+                  {!isInactive && (
+                    <div className="mt-6">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          navigate(`/teacher/courses/${id}/upload`)
+                        }
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                      >
+                        <FiPlus className="-ml-1 mr-2 h-5 w-5" />
+                        Thêm tài liệu mới
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
