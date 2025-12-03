@@ -83,16 +83,9 @@ const AppHeader: React.FC = () => {
           </button>
 
           <Link to="/" className="lg:hidden">
-            <img
-              className="dark:hidden"
-              src="./images/logo/logo.svg"
-              alt="Logo"
-            />
-            <img
-              className="hidden dark:block"
-              src="./images/logo/logo-dark.svg"
-              alt="Logo"
-            />
+            <span className="text-xl font-bold text-gray-900 dark:text-white">
+              ITS
+            </span>
           </Link>
 
           <button
@@ -118,7 +111,7 @@ const AppHeader: React.FC = () => {
           <div className="hidden lg:block">
             <form>
               <div className="relative">
-                <span className="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
+                {/* <span className="absolute -translate-y-1/2 pointer-events-none left-4 top-1/2">
                   <svg
                     className="fill-gray-500 dark:fill-gray-400"
                     width="20"
@@ -134,8 +127,8 @@ const AppHeader: React.FC = () => {
                       fill=""
                     />
                   </svg>
-                </span>
-                <input
+                </span> */}
+                {/* <input
                   ref={inputRef}
                   type="text"
                   placeholder="Search or type command..."
@@ -145,7 +138,7 @@ const AppHeader: React.FC = () => {
                 <button className="absolute right-2.5 top-1/2 inline-flex -translate-y-1/2 items-center gap-0.5 rounded-lg border border-gray-200 bg-gray-50 px-[7px] py-[4.5px] text-xs -tracking-[0.2px] text-gray-500 dark:border-gray-800 dark:bg-white/[0.03] dark:text-gray-400">
                   <span> ⌘ </span>
                   <span> K </span>
-                </button>
+                </button> */}
               </div>
             </form>
           </div>
