@@ -12,6 +12,7 @@ type ContentType =
   | "DOCUMENT"
   | "LECTURE"
   | "VIDEO"
+  | "LESSON"
   | "IMAGE"
   | "LINK"
   | "MATERIAL";
@@ -76,6 +77,7 @@ const getTypeLabel = (type: ContentType) => {
     DOCUMENT: "Tài liệu",
     LECTURE: "Slide",
     VIDEO: "Video",
+    LESSON: "Bài học",
     IMAGE: "Hình ảnh",
     LINK: "Bài đọc",
     MATERIAL: "Tài liệu",

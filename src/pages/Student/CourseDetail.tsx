@@ -18,6 +18,7 @@ type ApiContentType =
   | "DOCUMENT"
   | "LECTURE"
   | "VIDEO"
+  | "LESSON"
   | "IMAGE"
   | "LINK"
   | "MATERIAL";
@@ -75,6 +76,7 @@ const StudentCourseDetail = () => {
       DOCUMENT: "document",
       LECTURE: "slide",
       VIDEO: "video",
+      LESSON: "slide",
       IMAGE: "image",
       LINK: "reading",
       MATERIAL: "document",
