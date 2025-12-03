@@ -31,7 +31,6 @@ jobs:
           password: ${{ secrets.PASSWORD_PRODUCTION }}
           port: ${{ secrets.PORT_PRODUCTION }}
           script: |
-            docker login
             docker pull tuanemtramtinh/its-fe:v0
             docker stop its-fe
             docker rm its-fe
