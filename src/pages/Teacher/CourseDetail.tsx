@@ -125,9 +125,8 @@ const TeacherCourseDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest">("newest");
-  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [searchQuery] = useState("");
+  const [sortBy] = useState<"newest" | "oldest">("newest");
   const [activeTab, setActiveTab] = useState<"materials" | "students">(
     "materials"
   );

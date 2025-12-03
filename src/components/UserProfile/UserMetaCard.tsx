@@ -1,18 +1,14 @@
-import { useModal } from "../../hooks/useModal";
-
 import { useAppSelecteor } from "../../hooks/useRedux";
 
-export default function UserMetaCard() {
-  const { isOpen, openModal, closeModal } = useModal();
-  const handleSave = () => {
-    // Handle save logic here
-    console.log("Saving changes...");
-    closeModal();
-  };
+type AuthUserInfoShape = {
+  firstName?: string;
+  lastName?: string;
+};
 
-  const { userInfo }: { userInfo: unknown } = useAppSelecteor(
-    (state) => state.auth
-  );
+export default function UserMetaCard() {
+  const { userInfo } = useAppSelecteor((state) => state.auth) as {
+    userInfo: AuthUserInfoShape | null;
+  };
 
   return (
     <>
@@ -21,13 +17,17 @@ export default function UserMetaCard() {
           <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
             <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
               <img
-                src={`https://api.dicebear.com/9.x/initials/svg?seed=${userInfo.firstName}`}
+                src={`https://api.dicebear.com/9.x/initials/svg?seed=${
+                  userInfo?.firstName ?? "User"
+                }`}
                 alt="user"
               />
             </div>
             <div className="order-3 xl:order-2">
               <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
-                {`${userInfo.lastName} ${userInfo.firstName}`}
+                {`${userInfo?.lastName ?? ""} ${
+                  userInfo?.firstName ?? ""
+                }`.trim() || "Chưa có thông tin"}
               </h4>
               {/* <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
