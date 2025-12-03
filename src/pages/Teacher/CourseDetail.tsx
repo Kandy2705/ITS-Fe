@@ -247,9 +247,58 @@ const TeacherCourseDetail = () => {
     return typeMap[type] || "Tài liệu học tập";
   };
 
-  const handleDeleteMaterial = (id: string) => {
-    console.log(`Deleting material with id: ${id}`);
-    setMaterialToDelete(null);
+  const handleDeleteMaterial = async (contentId: string) => {
+    if (!id) return;
+
+    try {
+      // Lấy danh sách attachments của content này
+      const attachments = attachmentsMap[contentId] || [];
+
+      // Xóa tất cả attachments trước
+      for (const attachment of attachments) {
+        try {
+          await api.delete<ApiResponse<void>>(
+            `/learning-management/attachments/${attachment.id}`
+          );
+        } catch (err) {
+          // Log lỗi nhưng vẫn tiếp tục xóa các attachment khác
+          console.error(`Failed to delete attachment ${attachment.id}:`, err);
+        }
+      }
+
+      // Xóa content
+      const res = await api.delete<ApiResponse<void>>(
+        `/learning-management/contents/${contentId}`
+      );
+
+      if (res.data.success) {
+        // Xóa khỏi state
+        setContents((prev) => prev.filter((c) => c.id !== contentId));
+        // Xóa attachments khỏi map
+        setAttachmentsMap((prev) => {
+          const newMap = { ...prev };
+          delete newMap[contentId];
+          return newMap;
+        });
+        // Đóng modal
+        setMaterialToDelete(null);
+      } else {
+        throw new Error(res.data.message || "Không thể xóa tài liệu");
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi xóa tài liệu";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      alert(errorMessage);
+    }
   };
 
   // Fetch course instance details from API

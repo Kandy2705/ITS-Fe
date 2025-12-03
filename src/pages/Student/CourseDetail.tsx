@@ -11,6 +11,7 @@ import {
   FiCalendar,
   FiChevronDown,
   FiChevronUp,
+  FiDownload,
 } from "react-icons/fi";
 
 // Course Instance interfaces
@@ -58,6 +59,16 @@ interface Content {
   updatedAt: string;
 }
 
+interface Attachment {
+  id: string;
+  ownerId: string;
+  fileUrl: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  uploadedAt: string;
+}
+
 // Material type for display (mapped from Content)
 type MaterialType = "document" | "slide" | "video" | "image" | "reading";
 type MaterialStatus = "active" | "inactive" | "hidden";
@@ -100,6 +111,14 @@ const StudentCourseDetail = () => {
   const [contentsLoading, setContentsLoading] = useState(false);
   const [contentsError, setContentsError] = useState<string | null>(null);
 
+  // Attachments state - map contentId to attachments
+  const [attachmentsMap, setAttachmentsMap] = useState<
+    Record<string, Attachment[]>
+  >({});
+  const [attachmentsLoading, setAttachmentsLoading] = useState<
+    Record<string, boolean>
+  >({});
+
   // Map Content from API to LearningMaterial for display
   const mapContentToMaterial = (content: Content): LearningMaterial => {
     // Map ApiContentType to MaterialType
@@ -136,6 +155,36 @@ const StudentCourseDetail = () => {
     };
   };
 
+  // Fetch attachments for a content
+  const fetchAttachments = useCallback(async (contentId: string) => {
+    setAttachmentsLoading((prev) => ({ ...prev, [contentId]: true }));
+
+    try {
+      const res = await api.get<ApiResponse<Attachment[]>>(
+        `/learning-management/contents/${contentId}/attachments`
+      );
+
+      if (res.data.success && res.data.data) {
+        setAttachmentsMap((prev) => ({
+          ...prev,
+          [contentId]: res.data.data || [],
+        }));
+      }
+    } catch (err: unknown) {
+      // Silently fail for attachments - not critical
+      console.error(
+        `Failed to load attachments for content ${contentId}:`,
+        err
+      );
+      setAttachmentsMap((prev) => ({
+        ...prev,
+        [contentId]: [],
+      }));
+    } finally {
+      setAttachmentsLoading((prev) => ({ ...prev, [contentId]: false }));
+    }
+  }, []);
+
   // Fetch contents from API
   const fetchContents = useCallback(async () => {
     if (!id) return;
@@ -159,6 +208,11 @@ const StudentCourseDetail = () => {
       if (res.data.success && res.data.data) {
         const apiContents = res.data.data.content || [];
         setContents(apiContents);
+
+        // Fetch attachments for each content
+        apiContents.forEach((content) => {
+          void fetchAttachments(content.id);
+        });
       } else {
         setContentsError(
           res.data.message || "Không thể tải danh sách tài liệu"
@@ -180,7 +234,7 @@ const StudentCourseDetail = () => {
     } finally {
       setContentsLoading(false);
     }
-  }, [id]);
+  }, [id, fetchAttachments]);
 
   // Fetch course instance from API
   const fetchCourseInstance = useCallback(async () => {
@@ -282,6 +336,14 @@ const StudentCourseDetail = () => {
     statusLabel: getStatusLabel(material.status),
     isLocked: material.status === "hidden",
   });
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + " " + sizes[i];
+  };
 
   return (
     <>
@@ -508,6 +570,44 @@ const StudentCourseDetail = () => {
                               {material.allowedLate ? " • Cho phép trễ" : ""}
                             </p>
                           )}
+
+                          {/* Tệp đính kèm */}
+                          {(() => {
+                            const attachments =
+                              attachmentsMap[material.id] || [];
+                            const isLoadingAttachments =
+                              attachmentsLoading[material.id];
+
+                            return isLoadingAttachments ? (
+                              <div className="mt-3 text-sm text-gray-500">
+                                Đang tải tệp đính kèm...
+                              </div>
+                            ) : attachments.length > 0 ? (
+                              <div className="mt-3 space-y-2">
+                                <div className="text-sm font-medium text-gray-700">
+                                  Tệp đính kèm:
+                                </div>
+                                <div className="space-y-1">
+                                  {attachments.map((attachment) => (
+                                    <a
+                                      key={attachment.id}
+                                      href={attachment.fileUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-800 hover:underline"
+                                    >
+                                      <FiDownload size={14} />
+                                      <span>{attachment.fileName}</span>
+                                      <span className="text-gray-500 text-xs">
+                                        ({formatFileSize(attachment.fileSize)})
+                                      </span>
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : null;
+                          })()}
 
                           <div className="mt-2 flex gap-2">
                             <button

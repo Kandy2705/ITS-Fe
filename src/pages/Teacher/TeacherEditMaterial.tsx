@@ -95,6 +95,8 @@ const TeacherEditMaterial = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Map API ContentType to frontend MaterialFormat
   const mapApiTypeToFormat = (apiType: ApiContentType): MaterialFormat => {
@@ -307,6 +309,58 @@ const TeacherEditMaterial = () => {
       setError(errorMessage);
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!materialId || !courseId) return;
+
+    setDeleting(true);
+
+    try {
+      // Lấy tất cả attachments (existing + không bị đánh dấu xóa)
+      const allAttachments = existingAttachments.filter(
+        (att) => !attachmentsToDelete.includes(att.id)
+      );
+
+      // Xóa tất cả attachments trước
+      for (const attachment of allAttachments) {
+        try {
+          await api.delete<ApiResponse<void>>(
+            `/learning-management/attachments/${attachment.id}`
+          );
+        } catch (err) {
+          // Log lỗi nhưng vẫn tiếp tục xóa các attachment khác
+          console.error(`Failed to delete attachment ${attachment.id}:`, err);
+        }
+      }
+
+      // Xóa content
+      const res = await api.delete<ApiResponse<void>>(
+        `/learning-management/contents/${materialId}`
+      );
+
+      if (res.data.success) {
+        // Navigate về trang course detail sau khi xóa thành công
+        navigate(`/teacher/courses/${courseId}`);
+      } else {
+        throw new Error(res.data.message || "Không thể xóa tài liệu");
+      }
+    } catch (err: unknown) {
+      let errorMessage = "Đã xảy ra lỗi khi xóa tài liệu";
+      if (axios.isAxiosError(err)) {
+        if (err.response?.data && typeof err.response.data === "object") {
+          const data = err.response.data as { message?: string };
+          errorMessage = data.message || err.message || errorMessage;
+        } else {
+          errorMessage = err.message || errorMessage;
+        }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setError(errorMessage);
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -636,29 +690,72 @@ const TeacherEditMaterial = () => {
             )}
           </div>
 
-          <div className="flex justify-end space-x-3 border-t border-gray-200 pt-4">
+          <div className="flex justify-between items-center border-t border-gray-200 pt-4">
             <button
               type="button"
-              onClick={() => navigate(-1)}
-              className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => setShowDeleteConfirm(true)}
+              disabled={deleting || isSubmitting}
+              className="rounded-lg border border-red-300 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Huỷ bỏ
+              Xóa tài liệu
             </button>
-            <button
-              type="submit"
-              disabled={
-                isSubmitting ||
-                !material.title.trim() ||
-                !materialId ||
-                !courseId
-              }
-              className="rounded-lg border border-transparent px-6 py-2.5 text-sm font-medium text-white shadow-sm bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
-            </button>
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Huỷ bỏ
+              </button>
+              <button
+                type="submit"
+                disabled={
+                  isSubmitting ||
+                  !material.title.trim() ||
+                  !materialId ||
+                  !courseId
+                }
+                className="rounded-lg border border-transparent px-6 py-2.5 text-sm font-medium text-white shadow-sm bg-brand-600 hover:bg-brand-700 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
           </div>
         </form>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-999999">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-medium text-gray-900 mb-4">
+              Xác nhận xóa
+            </h3>
+            <p className="text-gray-600 mb-6">
+              Bạn có chắc chắn muốn xóa tài liệu này không? Hành động này không
+              thể hoàn tác. Tất cả các file đính kèm cũng sẽ bị xóa.
+            </p>
+            <div className="flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleting}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={deleting}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? "Đang xóa..." : "Xóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
