@@ -30,5 +30,5 @@
   EXPOSE 5173
   
   # Serve thư mục dist, lắng nghe trên 0.0.0.0:5173 (truy cập được từ ngoài)
-  CMD ["serve", "-s", "dist", "-l", "0.0.0.0:5173"]
+  CMD ["serve", "-s", "dist", "-l", "5173"]
   
